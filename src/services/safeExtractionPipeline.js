@@ -19,8 +19,9 @@ const execPromise = util.promisify(exec);
 // Import header-slice extractor (deterministic, no LLM)
 const headerSlice = require('./headerSliceExtractor');
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const SCHEMA_VERSION = '2.1'; // Updated for header-slice integration
+// OpenAI API configuration (set via environment variable)
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const SCHEMA_VERSION = '2.2'; // Updated for OpenAI integration
 
 // Confidence thresholds
 const CONFIDENCE_AUTO_MERGE = 0.80;
@@ -200,40 +201,42 @@ async function extractTextFromPDF(pdfPath) {
 // LLM CALLS
 // ============================================================================
 
-async function isOllamaAvailable() {
+async function isLLMAvailable() {
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
-        const response = await fetch(`${OLLAMA_URL}/api/tags`, { signal: controller.signal });
-        clearTimeout(timeout);
+        const response = await fetch('https://api.openai.com/v1/models', {
+            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` }
+        });
         return response.ok;
     } catch {
         return false;
     }
 }
 
-async function callOllamaPass(systemPrompt, userPrompt, model = 'qwen2.5:7b-instruct') {
-    const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+async function callLLMPass(systemPrompt, userPrompt, model = 'gpt-4o-mini') {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${OPENAI_API_KEY}`
+        },
         body: JSON.stringify({
             model,
-            prompt: userPrompt,
-            system: systemPrompt,
-            stream: false,
-            options: {
-                temperature: 0.05, // Very low for deterministic extraction
-                num_predict: 4096
-            }
+            messages: [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ],
+            temperature: 0.05,
+            max_tokens: 4096
         })
     });
     
     if (!response.ok) {
-        throw new Error(`Ollama returned ${response.status}`);
+        const error = await response.json();
+        throw new Error(`OpenAI returned ${response.status}: ${error.error?.message}`);
     }
     
     const data = await response.json();
-    return data.response;
+    return data.choices[0].message.content;
 }
 
 function parseJSONFromLLM(llmResponse) {
@@ -641,18 +644,18 @@ async function processDocumentSafe(document) {
         }
         
         // ====================================================================
-        // Step 3: Optional LLM enhancement (only if Ollama available AND 
+        // Step 3: Optional LLM enhancement (only if OpenAI available AND 
         //         header-slice missed important fields)
         // ====================================================================
-        const ollamaAvailable = await isOllamaAvailable();
+        const llmAvailable = await isLLMAvailable();
         
-        // Only use LLM if we're missing critical data AND Ollama is available
+        // Only use LLM if we're missing critical data AND OpenAI is available
         const needsLLMHelp = (
             sliceResult.extraction.medications.length === 0 ||
             (sliceResult.invariants.procedures_header_exists && sliceResult.extraction.surgery.procedures.length === 0)
         );
         
-        if (ollamaAvailable && needsLLMHelp) {
+        if (llmAvailable && needsLLMHelp) {
             console.log('[Pipeline] Running LLM enhancement for missing fields...');
             try {
                 // Only run micro-prompts for what we're missing
@@ -737,7 +740,7 @@ ${text.substring(0, 4000)}
 >>>`;
     
     try {
-        const response = await callOllamaPass(MEDS_SYSTEM, MEDS_USER, 'qwen2.5:7b-instruct');
+        const response = await callLLMPass(MEDS_SYSTEM, MEDS_USER, 'gpt-4o-mini');
         const parsed = parseJSONFromLLM(response);
         return parsed.medications || [];
     } catch (e) {
@@ -1083,7 +1086,7 @@ function safeParseJsonSafe(str, defaultVal = []) {
 module.exports = {
     processDocumentSafe,
     extractTextFromPDF,
-    isOllamaAvailable,
+    isLLMAvailable,
     checkInvariants,
     computeConfidence,
     computeFieldConfidence,

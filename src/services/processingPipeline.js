@@ -133,18 +133,17 @@ async function runOCR(filePath, textPath) {
     };
 }
 
+// OpenAI API key (set via environment variable)
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+
 /**
- * Check if Ollama is available
+ * Check if OpenAI API is available
  */
-async function isOllamaAvailable() {
-    const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+async function isLLMAvailable() {
     try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
-        const response = await fetch(`${OLLAMA_URL}/api/tags`, { 
-            signal: controller.signal 
+        const response = await fetch('https://api.openai.com/v1/models', {
+            headers: { 'Authorization': `Bearer ${OPENAI_API_KEY}` }
         });
-        clearTimeout(timeout);
         return response.ok;
     } catch {
         return false;
@@ -152,39 +151,44 @@ async function isOllamaAvailable() {
 }
 
 /**
- * Call Ollama API for LLM extraction
+ * Call OpenAI API for LLM extraction
  */
-async function callOllama(documentText, model = 'qwen2.5:7b-instruct') {
-    const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-    
+async function callLLM(documentText, model = 'gpt-4o-mini') {
     try {
-        const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${OPENAI_API_KEY}`
+            },
             body: JSON.stringify({
                 model: model,
-                prompt: getUserPrompt(documentText),
-                system: SYSTEM_PROMPT,
-                stream: false,
-                options: {
-                    temperature: 0.1,
-                    num_predict: 4096
-                }
+                messages: [
+                    { role: 'system', content: SYSTEM_PROMPT },
+                    { role: 'user', content: getUserPrompt(documentText) }
+                ],
+                temperature: 0.1,
+                max_tokens: 4096
             })
         });
         
         if (!response.ok) {
-            throw new Error(`Ollama returned ${response.status}`);
+            const error = await response.json();
+            throw new Error(`OpenAI API error: ${error.error?.message || response.status}`);
         }
         
         const data = await response.json();
-        return { response: data.response, model };
+        return { 
+            response: data.choices[0].message.content, 
+            model,
+            usage: data.usage 
+        };
     } catch (error) {
-        console.error('Ollama error:', error.message);
-        // Try fallback model
-        if (model !== 'llama3.2:3b') {
-            console.log('Trying fallback model llama3.2:3b...');
-            return callOllama(documentText, 'llama3.2:3b');
+        console.error('OpenAI error:', error.message);
+        // Try fallback to cheaper model
+        if (model !== 'gpt-3.5-turbo') {
+            console.log('Trying fallback model gpt-3.5-turbo...');
+            return callLLM(documentText, 'gpt-3.5-turbo');
         }
         throw error;
     }
@@ -260,11 +264,11 @@ async function processDocument(document) {
         throw new Error('Could not extract sufficient text from document. Is it a valid PDF?');
     }
     
-    // Step 2: Check if Ollama is available
-    const ollamaAvailable = await isOllamaAvailable();
+    // Step 2: Check if OpenAI is available
+    const llmAvailable = await isLLMAvailable();
     
-    if (!ollamaAvailable) {
-        console.log('Ollama not available, using smart regex fallback...');
+    if (!llmAvailable) {
+        console.log('OpenAI not available, using smart regex fallback...');
         return processDocumentWithRegex(text, textPath, method);
     }
     
@@ -276,9 +280,9 @@ async function processDocument(document) {
     }
     
     // Step 4: Call LLM
-    console.log('Calling Ollama for extraction...');
+    console.log('Calling OpenAI for extraction...');
     try {
-        const { response: llmResponse, model } = await callOllama(processedText);
+        const { response: llmResponse, model } = await callLLM(processedText);
         console.log('LLM response received');
         
         // Step 5: Parse and validate
@@ -511,7 +515,7 @@ module.exports = {
     processDocumentManual,
     processDocumentWithRegex,
     extractTextFromPDF,
-    callOllama,
-    isOllamaAvailable,
+    callLLM,
+    isLLMAvailable,
     EXTRACTION_SCHEMA
 };

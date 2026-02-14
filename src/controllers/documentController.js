@@ -318,45 +318,39 @@ const deleteDocument = async (req, res) => {
     }
 };
 
-// Check LLM (Ollama) health status
+// Check LLM (OpenAI) health status
 const checkLLMHealth = async (req, res) => {
-    const { isOllamaAvailable } = require('../services/processingPipeline');
-    const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
+    const { isLLMAvailable } = require('../services/processingPipeline');
     
     try {
-        const available = await isOllamaAvailable();
+        const available = await isLLMAvailable();
         
         if (available) {
-            // Try to get model list
-            const response = await fetch(`${OLLAMA_URL}/api/tags`);
-            const data = await response.json();
-            const models = data.models?.map(m => m.name) || [];
-            
             res.status(200).json({
                 status: 'online',
-                url: OLLAMA_URL,
-                models: models,
-                hasRecommendedModel: models.some(m => m.includes('qwen2.5') || m.includes('llama')),
-                message: 'Ollama is running'
+                provider: 'OpenAI',
+                models: ['gpt-4o-mini', 'gpt-3.5-turbo'],
+                hasRecommendedModel: true,
+                message: 'OpenAI API is available'
             });
         } else {
             res.status(200).json({
                 status: 'offline',
-                url: OLLAMA_URL,
+                provider: 'OpenAI',
                 models: [],
                 hasRecommendedModel: false,
-                message: 'Ollama not running. Using regex fallback for extraction.',
-                instructions: 'Run: brew install ollama && ollama serve'
+                message: 'OpenAI API unavailable. Check API key.',
+                instructions: 'Verify OPENAI_API_KEY environment variable'
             });
         }
     } catch (error) {
         res.status(200).json({
             status: 'error',
-            url: OLLAMA_URL,
+            provider: 'OpenAI',
             models: [],
             hasRecommendedModel: false,
             message: error.message,
-            instructions: 'Run: brew install ollama && ollama serve'
+            instructions: 'Verify OPENAI_API_KEY environment variable'
         });
     }
 };
