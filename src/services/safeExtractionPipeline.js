@@ -179,12 +179,13 @@ async function extractTextFromPDF(pdfPath) {
         const pdfParse = require('pdf-parse');
         const dataBuffer = fs.readFileSync(pdfPath);
         const data = await pdfParse(dataBuffer);
+        console.log('[pdf-parse] Extracted', data.text?.length || 0, 'characters');
         if (data.text && data.text.trim().length > 50) {
             fs.writeFileSync(textPath, data.text);
             return { text: data.text, textPath, method: 'pdf-parse', charCount: data.text.length };
         }
     } catch (e) {
-        console.log('pdf-parse failed');
+        console.log('pdf-parse failed:', e.message);
     }
     
     // Return with needs_review flag if text is too short (likely scanned)

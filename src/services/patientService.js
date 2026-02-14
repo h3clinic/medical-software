@@ -137,6 +137,106 @@ const deletePatient = (id) => {
     });
 };
 
+// Merge extraction data into patient chart
+const mergeExtractionIntoChart = (patientId, extractionData) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Get current patient data
+            const patient = await getPatientById(patientId);
+            if (!patient) {
+                return reject(new Error('Patient not found'));
+            }
+
+            // Parse existing chart data
+            let surgeries = [];
+            let problems = [];
+            let meds = [];
+            let allergies = [];
+            
+            try { surgeries = JSON.parse(patient.surgery_history_json) || []; } catch(e) {}
+            try { problems = JSON.parse(patient.problem_list_json) || []; } catch(e) {}
+            try { meds = JSON.parse(patient.medications_json) || []; } catch(e) {}
+            try { allergies = JSON.parse(patient.allergies_json) || []; } catch(e) {}
+
+            // Merge new data (avoid duplicates)
+            if (extractionData.surgery?.procedures) {
+                extractionData.surgery.procedures.forEach(proc => {
+                    if (!surgeries.some(s => s.procedure === proc.procedure && s.date === proc.date)) {
+                        surgeries.push(proc);
+                    }
+                });
+            }
+            
+            if (extractionData.diagnoses) {
+                const allDiagnoses = [
+                    ...(extractionData.diagnoses.preop || []),
+                    ...(extractionData.diagnoses.postop || [])
+                ];
+                allDiagnoses.forEach(dx => {
+                    if (!problems.includes(dx)) {
+                        problems.push(dx);
+                    }
+                });
+            }
+            
+            if (extractionData.medications) {
+                extractionData.medications.forEach(med => {
+                    const medName = typeof med === 'string' ? med : med.name;
+                    if (!meds.some(m => (typeof m === 'string' ? m : m.name) === medName)) {
+                        meds.push(med);
+                    }
+                });
+            }
+            
+            if (extractionData.allergies) {
+                extractionData.allergies.forEach(allergy => {
+                    const allergyName = typeof allergy === 'string' ? allergy : allergy.substance;
+                    if (!allergies.some(a => (typeof a === 'string' ? a : a.substance) === allergyName)) {
+                        allergies.push(allergy);
+                    }
+                });
+            }
+
+            // Update patient record
+            const now = new Date().toISOString();
+            const sql = `UPDATE patients SET 
+                surgery_history_json = ?,
+                problem_list_json = ?,
+                medications_json = ?,
+                allergies_json = ?,
+                chart_summary = COALESCE(chart_summary, '') || ?,
+                chart_updated_at = ?,
+                updated_at = ?
+                WHERE id = ?`;
+
+            const summaryAddition = extractionData.summary ? `\n${extractionData.summary}` : '';
+
+            db.run(sql, [
+                JSON.stringify(surgeries),
+                JSON.stringify(problems),
+                JSON.stringify(meds),
+                JSON.stringify(allergies),
+                summaryAddition,
+                now,
+                now,
+                patientId
+            ], function(err) {
+                if (err) return reject(err);
+                resolve({
+                    id: patientId,
+                    surgeries,
+                    problems,
+                    meds,
+                    allergies,
+                    merged_at: now
+                });
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
+};
+
 module.exports = {
     addPatient,
     getAllPatients,
@@ -144,4 +244,5 @@ module.exports = {
     checkDuplicates,
     updatePatient,
     deletePatient,
+    mergeExtractionIntoChart,
 };

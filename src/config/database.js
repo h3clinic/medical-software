@@ -35,12 +35,34 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 intake_notes TEXT,
                 has_unknown_fields INTEGER DEFAULT 0,
                 intake_checklist TEXT,
+                surgery_history_json TEXT,
+                problem_list_json TEXT,
+                medications_json TEXT,
+                allergies_json TEXT,
+                chart_summary TEXT,
+                chart_updated_at TEXT,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 updated_at TEXT,
                 FOREIGN KEY (intake_batch_id) REFERENCES intake_batches(id)
             )`, (err) => {
                 if (err) console.error('Error creating patients table: ' + err.message);
                 else console.log('Patients table ready');
+            });
+
+            // Add chart columns to existing patients table (migration)
+            const chartColumns = [
+                'surgery_history_json TEXT',
+                'problem_list_json TEXT', 
+                'medications_json TEXT',
+                'allergies_json TEXT',
+                'chart_summary TEXT',
+                'chart_updated_at TEXT'
+            ];
+            chartColumns.forEach(col => {
+                const colName = col.split(' ')[0];
+                db.run(`ALTER TABLE patients ADD COLUMN ${col}`, (err) => {
+                    // Ignore "duplicate column" errors - expected if column exists
+                });
             });
 
             // Visits table
