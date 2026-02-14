@@ -59,6 +59,22 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 if (err) console.error('Error creating visits table: ' + err.message);
                 else console.log('Visits table ready');
             });
+
+            // Journal entries table (update log for each patient)
+            db.run(`CREATE TABLE IF NOT EXISTS journal_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                entry_date TEXT DEFAULT CURRENT_TIMESTAMP,
+                entry_type TEXT DEFAULT 'note',
+                title TEXT,
+                content TEXT NOT NULL,
+                created_by TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES patients(id)
+            )`, (err) => {
+                if (err) console.error('Error creating journal_entries table: ' + err.message);
+                else console.log('Journal entries table ready');
+            });
         });
     }
 });
