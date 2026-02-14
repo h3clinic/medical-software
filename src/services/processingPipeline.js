@@ -82,9 +82,10 @@ async function extractTextFromPDF(pdfPath) {
     
     try {
         // Try using pdf-parse library if installed
-        const pdfParse = require('pdf-parse');
+        const { PDFParse } = require('pdf-parse');
         const dataBuffer = fs.readFileSync(pdfPath);
-        const data = await pdfParse(dataBuffer);
+        const pdfParser = new PDFParse({ data: dataBuffer });
+        const data = await pdfParser.getText();
         if (data.text && data.text.trim().length > 50) {
             fs.writeFileSync(textPath, data.text);
             return { text: data.text, textPath, method: 'pdf-parse' };
