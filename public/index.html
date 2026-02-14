@@ -1,0 +1,1936 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H3 Clinic - Medical Database</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 10px;
+        }
+        header h1 { font-size: 2rem; margin-bottom: 5px; }
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: 600; margin-bottom: 5px; color: #555; font-size: 13px; }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a6fd6; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-warning { background: #ffc107; color: #333; }
+        .btn-info { background: #17a2b8; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn-sm { padding: 5px 10px; font-size: 12px; }
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #eee; }
+        th { background: #f8f9fa; font-weight: 600; color: #555; }
+        tr:hover { background: #f8f9fa; }
+        .actions { display: flex; gap: 5px; }
+
+        /* Intake Mode Panel */
+        .intake-panel {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            color: white;
+        }
+        .intake-panel h3 { margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+        .intake-panel .form-row { margin-bottom: 10px; }
+        .intake-panel label { color: white; }
+        .intake-panel input, .intake-panel select {
+            background: rgba(255,255,255,0.9);
+        }
+        .intake-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .intake-controls .form-group { flex: 1; min-width: 150px; }
+        .new-batch-inline {
+            display: flex;
+            gap: 5px;
+        }
+        .new-batch-inline input {
+            flex: 1;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        /* Draft indicator */
+        .draft-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 10px;
+            background: #fff3cd;
+            color: #856404;
+            border-radius: 5px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .draft-indicator.saved {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        /* Toggle switch */
+        .toggle-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+        }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #ccc;
+            transition: .3s;
+            border-radius: 26px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+        }
+        .toggle input:checked + .toggle-slider { background-color: #f5576c; }
+        .toggle input:checked + .toggle-slider:before { transform: translateX(24px); }
+
+        /* Checklist panel */
+        .checklist-panel {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .checklist-panel h4 { margin-bottom: 10px; color: #667eea; }
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .checklist-item:last-child { border-bottom: none; }
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            background: #28a745;
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 9999;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.error { background: #dc3545; }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px 10px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-body { padding: 20px; }
+        .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+        }
+
+        /* Duplicate warning modal */
+        .duplicate-list {
+            background: #fff3cd;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .duplicate-item {
+            padding: 10px;
+            border-bottom: 1px solid #ffc107;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .duplicate-item:last-child { border-bottom: none; }
+
+        /* Visit styles */
+        .visit-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        .visit-card h4 { color: #667eea; margin-bottom: 10px; }
+        .visit-detail { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+        .visit-detail p { margin: 5px 0; }
+        .visit-detail strong { color: #555; }
+        .vitals-box {
+            background: #e8f4fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .empty-state { text-align: center; padding: 40px; color: #888; }
+        .patient-info {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .patient-info h3 { color: #667eea; margin-bottom: 10px; }
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+        .section-title h3 { color: #333; }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .badge-success { background: #d4edda; color: #155724; }
+
+        /* Filter bar */
+        .filter-bar {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .filter-bar select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        /* Main layout */
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+        }
+        @media (max-width: 900px) {
+            .main-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Document upload styles */
+        .doc-upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            background: #f8f9ff;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .doc-upload-area:hover { background: #eef1ff; border-color: #5a6fd6; }
+        .doc-upload-area.dragover { background: #e0e5ff; border-color: #4a5fc6; }
+        .doc-list { margin-top: 15px; }
+        .doc-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            margin-bottom: 8px;
+        }
+        .doc-item .doc-info { flex: 1; }
+        .doc-item .doc-name { font-weight: 600; color: #333; }
+        .doc-item .doc-status { font-size: 12px; margin-top: 3px; }
+        .doc-item .doc-actions { display: flex; gap: 5px; }
+        .status-uploaded { color: #6c757d; }
+        .status-processing { color: #ffc107; }
+        .status-done { color: #28a745; }
+        .status-error { color: #dc3545; }
+
+        /* Extraction view styles */
+        .extraction-panel {
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .extraction-panel h4 { color: #2e7d32; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+        .extraction-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        .extraction-field {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            border-left: 3px solid #4caf50;
+        }
+        .extraction-field label { font-size: 11px; color: #666; text-transform: uppercase; display: block; margin-bottom: 3px; }
+        .extraction-field .value { font-size: 14px; color: #333; }
+        .extraction-list {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .extraction-list h5 { font-size: 12px; color: #666; margin-bottom: 8px; text-transform: uppercase; }
+        .extraction-list ul { margin: 0; padding-left: 20px; }
+        .extraction-list li { margin: 3px 0; font-size: 13px; }
+        .confidence-bar {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .confidence-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.3s;
+        }
+        .confidence-low { background: #f44336; }
+        .confidence-medium { background: #ff9800; }
+        .confidence-high { background: #4caf50; }
+        .llm-note {
+            font-size: 11px;
+            color: #888;
+            font-style: italic;
+            margin-top: 5px;
+        }
+        /* Chart section styles */
+        .chart-section {
+            background: white;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+        .chart-list {
+            font-size: 13px;
+            color: #555;
+        }
+        .chart-list ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+        .chart-list li {
+            margin: 4px 0;
+        }
+        .chart-list .surgery-item {
+            background: #fff3e0;
+            padding: 6px 10px;
+            border-radius: 4px;
+            margin: 5px 0;
+            border-left: 3px solid #e65100;
+        }
+        .chart-list .med-item {
+            background: #e3f2fd;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 3px 0;
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .chart-list .allergy-item {
+            background: #ffebee;
+            padding: 4px 8px;
+            border-radius: 4px;
+            margin: 3px 0;
+            display: inline-block;
+            margin-right: 5px;
+            color: #c62828;
+        }
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🏥 H3 Clinic</h1>
+            <p>Medical Database - Paper Intake Mode</p>
+        </header>
+
+        <!-- Intake Mode Panel -->
+        <div class="intake-panel">
+            <h3>📋 Paper Intake Mode <span id="draftIndicator" class="draft-indicator" style="display:none;">Draft saved</span></h3>
+            <div class="intake-controls">
+                <div class="form-group">
+                    <label>Current Batch</label>
+                    <select id="currentBatch">
+                        <option value="">-- No Batch --</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Or Create New Batch</label>
+                    <div class="new-batch-inline">
+                        <input type="text" id="newBatchName" placeholder="e.g., 2026-01-03 Box A">
+                        <button class="btn btn-warning btn-sm" onclick="createBatch()">+ Add</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Scanned By</label>
+                    <input type="text" id="scannedBy" placeholder="Your name">
+                </div>
+            </div>
+        </div>
+
+        <div class="main-grid">
+            <div>
+                <!-- Quick Add Patient Form -->
+                <div class="card">
+                    <h2>➕ Quick Add Patient <small style="font-weight:normal;color:#888;">(Upload docs later to enrich chart)</small></h2>
+                    <form id="patientForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Full Name *</label>
+                                <input type="text" id="patientName" required placeholder="First Last" autofocus>
+                            </div>
+                            <div class="form-group">
+                                <label>Date of Birth</label>
+                                <input type="date" id="patientDOB">
+                            </div>
+                            <div class="form-group">
+                                <label>Phone</label>
+                                <input type="text" id="patientContact" placeholder="Phone Number">
+                            </div>
+                            <div class="form-group">
+                                <label>MRN / Source ID</label>
+                                <input type="text" id="sourceFileId" placeholder="Optional">
+                            </div>
+                        </div>
+                        
+                        <!-- Collapsible additional fields -->
+                        <details id="moreFieldsToggle" style="margin-top: 10px;">
+                            <summary style="cursor:pointer;color:#667eea;font-weight:500;">+ More fields (optional)</summary>
+                            <div class="form-row" style="margin-top: 10px;">
+                                <div class="form-group">
+                                    <label>Age (if DOB unclear)</label>
+                                    <input type="number" id="patientAge" min="0" max="150" placeholder="Age">
+                                </div>
+                                <div class="form-group">
+                                    <label>Gender</label>
+                                    <select id="patientGender">
+                                        <option value="">Select</option>
+                                        <option value="Male">Male</option>
+                                        <option value="Female">Female</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" id="patientEmail" placeholder="Email address">
+                                </div>
+                                <div class="form-group">
+                                    <label>Address</label>
+                                    <input type="text" id="patientAddress" placeholder="Address">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group" style="flex: 2;">
+                                    <label>Notes</label>
+                                    <textarea id="intakeNotes" rows="2" placeholder="Any notes about this patient"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label>&nbsp;</label>
+                                    <div class="toggle-group">
+                                        <label class="toggle">
+                                            <input type="checkbox" id="hasUnknownFields">
+                                            <span class="toggle-slider"></span>
+                                        </label>
+                                        <span>Has unknown fields</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </details>
+                        
+                        <div class="btn-group" style="margin-top: 15px;">
+                            <button type="submit" class="btn btn-primary">💾 Create Patient</button>
+                            <button type="button" class="btn btn-info" onclick="saveAndUpload()">📤 Create & Upload Docs</button>
+                            <button type="button" class="btn btn-success" onclick="saveAndAddNext()">💾 Create & Add Another</button>
+                            <button type="button" class="btn btn-secondary" onclick="clearDraft()">Clear</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Patients List -->
+                <div class="card">
+                    <h2>📋 Patients List</h2>
+                    <div class="filter-bar">
+                        <select id="filterBatch" onchange="loadPatients()">
+                            <option value="">All Batches</option>
+                        </select>
+                        <input type="text" id="searchPatients" placeholder="🔍 Search by name..." oninput="filterPatientsTable()" style="padding:8px;border:1px solid #ddd;border-radius:5px;flex:1;max-width:250px;">
+                        <span id="patientCount" class="badge badge-info">0 patients</span>
+                        <button class="btn btn-success btn-sm" onclick="exportToExcel()" title="Export all patients to Excel">📊 Export Excel</button>
+                    </div>
+                    <table id="patientsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>DOB</th>
+                                <th>Phone</th>
+                                <th>Chart</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="patientsBody">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Right sidebar - Checklist -->
+            <div>
+                <div class="card">
+                    <h2>✅ Paper Checklist</h2>
+                    <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Verify these items from the paper file:</p>
+                    <div class="checklist-panel">
+                        <div class="checklist-item">
+                            <input type="checkbox" id="checkId">
+                            <label for="checkId">ID/Photo verified</label>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" id="checkDOB">
+                            <label for="checkDOB">DOB verified</label>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" id="checkInsurance">
+                            <label for="checkInsurance">Insurance info copied</label>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" id="checkConsent">
+                            <label for="checkConsent">Consent form present</label>
+                        </div>
+                        <div class="checklist-item">
+                            <input type="checkbox" id="checkContact">
+                            <label for="checkContact">Contact info verified</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>📊 Session Stats</h2>
+                    <p><strong>Patients added this session:</strong> <span id="sessionCount">0</span></p>
+                    <p><strong>Current batch:</strong> <span id="currentBatchName">None</span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Duplicate Warning Modal -->
+    <div id="duplicateModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <h2>⚠️ Possible Duplicates Found</h2>
+                <button class="close-btn" onclick="closeDuplicateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>The following existing patients match the data you entered:</p>
+                <div id="duplicateList" class="duplicate-list"></div>
+                <div class="btn-group" style="justify-content: flex-end; margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="closeDuplicateModal()">Cancel</button>
+                    <button class="btn btn-warning" onclick="saveAnywayFromDuplicate()">Save Anyway</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Patient Details Modal -->
+    <div id="patientModal" class="modal">
+        <div class="modal-content" style="max-width: 1000px;">
+            <div class="modal-header">
+                <h2 id="modalTitle">Patient Details</h2>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="patient-info" id="patientInfo"></div>
+                
+                <!-- Patient Chart (Virtual File) -->
+                <div id="chartPanel" class="card" style="background:#f0f9ff;margin:15px 0;padding:15px;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px;">
+                        <h3 style="color:#0277bd;margin:0;">📋 Patient Chart <small style="font-weight:normal;color:#888;">(auto-populated from uploaded documents)</small></h3>
+                        <div style="display:flex;gap:10px;align-items:center;">
+                            <span id="llmStatus" style="font-size:12px;padding:4px 8px;border-radius:4px;"></span>
+                            <button onclick="resetPatientChart()" class="btn btn-sm" style="background:#ff5722;color:white;font-size:12px;">🔄 Reset Chart</button>
+                        </div>
+                    </div>
+                    
+                    <div id="chartSummary" style="margin-bottom:15px;"></div>
+                    
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:15px;">
+                        <div class="chart-section" id="chartSurgeries">
+                            <h4 style="color:#e65100;font-size:14px;margin-bottom:8px;">🔪 Surgical History</h4>
+                            <div id="surgeriesList" class="chart-list">No surgeries recorded</div>
+                        </div>
+                        <div class="chart-section" id="chartProblems">
+                            <h4 style="color:#7b1fa2;font-size:14px;margin-bottom:8px;">📝 Problem List / Diagnoses</h4>
+                            <div id="problemsList" class="chart-list">No problems recorded</div>
+                        </div>
+                        <div class="chart-section" id="chartMeds">
+                            <h4 style="color:#1565c0;font-size:14px;margin-bottom:8px;">💊 Medications</h4>
+                            <div id="medsList" class="chart-list">No medications recorded</div>
+                        </div>
+                        <div class="chart-section" id="chartAllergies">
+                            <h4 style="color:#c62828;font-size:14px;margin-bottom:8px;">⚠️ Allergies</h4>
+                            <div id="allergiesList" class="chart-list">No allergies recorded</div>
+                        </div>
+                    </div>
+                    <p id="chartLastUpdated" style="font-size:11px;color:#888;margin-top:10px;"></p>
+                </div>
+
+                <!-- Document Upload Section -->
+                <div class="section-title">
+                    <h3>📄 Documents</h3>
+                    <button class="btn btn-primary btn-sm" onclick="document.getElementById('docFileInput').click()">+ Upload PDF</button>
+                </div>
+                <input type="file" id="docFileInput" accept=".pdf,image/*" style="display:none" onchange="uploadDocument(event)">
+                <div class="doc-upload-area" id="docUploadArea" onclick="document.getElementById('docFileInput').click()">
+                    <p>📤 Click or drag PDF to upload</p>
+                    <small>Hospital records, discharge summaries, op notes → AI extracts surgeries, diagnoses, meds</small>
+                </div>
+                <div class="doc-list" id="docList"></div>
+
+                <div class="section-title"><h3>📝 Add New Visit</h3></div>
+                <form id="visitForm">
+                    <input type="hidden" id="visitPatientId">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Visit Date *</label>
+                            <input type="datetime-local" id="visitDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Chief Complaint</label>
+                            <input type="text" id="chiefComplaint" placeholder="Main reason for visit">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Blood Pressure</label>
+                            <input type="text" id="vitalsBP" placeholder="e.g., 120/80">
+                        </div>
+                        <div class="form-group">
+                            <label>Heart Rate</label>
+                            <input type="number" id="vitalsHR" placeholder="e.g., 72">
+                        </div>
+                        <div class="form-group">
+                            <label>Temperature (°F)</label>
+                            <input type="number" step="0.1" id="vitalsTemp" placeholder="e.g., 98.6">
+                        </div>
+                        <div class="form-group">
+                            <label>Weight (kg)</label>
+                            <input type="number" step="0.1" id="vitalsWeight" placeholder="e.g., 70">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Assessment</label>
+                            <textarea id="assessment" rows="2" placeholder="Clinical assessment"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Diagnosis</label>
+                            <textarea id="diagnosis" rows="2" placeholder="Diagnosis"></textarea>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Treatment Plan</label>
+                        <textarea id="plan" rows="2" placeholder="Treatment plan and notes"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success" style="margin-top: 10px;">Add Visit</button>
+                </form>
+                <div class="section-title"><h3>📅 Visit History</h3></div>
+                <div id="visitsList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Extraction Details Modal -->
+    <div id="extractionModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #43a047 0%, #1b5e20 100%);">
+                <h2>🤖 AI Extraction Results</h2>
+                <button class="close-btn" onclick="closeExtractionModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="extractionModalBody"></div>
+        </div>
+    </div>
+
+    <!-- Access Code Modal -->
+    <div id="accessModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:9999; justify-content:center; align-items:center;">
+        <div style="background:white; padding:40px; border-radius:15px; text-align:center; max-width:400px; width:90%;">
+            <h2 style="color:#667eea; margin-bottom:20px;">🔐 H3 Clinic Access</h2>
+            <p style="color:#666; margin-bottom:20px;">Enter the access code to continue</p>
+            <input type="password" id="accessCodeInput" placeholder="Enter access code" 
+                   style="width:100%; padding:15px; font-size:18px; border:2px solid #ddd; border-radius:8px; text-align:center; margin-bottom:15px;"
+                   onkeypress="if(event.key==='Enter') verifyAccessCode()">
+            <div id="accessError" style="color:#dc3545; margin-bottom:15px; display:none;">Invalid access code</div>
+            <button onclick="verifyAccessCode()" 
+                    style="width:100%; padding:15px; background:linear-gradient(135deg, #667eea 0%, #764ba2 100%); color:white; border:none; border-radius:8px; font-size:16px; cursor:pointer; font-weight:600;">
+                Unlock Access
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let sessionCount = 0;
+        let pendingPatientData = null;
+        let saveAndNextMode = false;
+        let currentPatientId = null;
+        let accessCode = localStorage.getItem('h3clinic_access_code') || '';
+
+        // ========== ACCESS CODE MANAGEMENT ==========
+        function showAccessModal() {
+            document.getElementById('accessModal').style.display = 'flex';
+            document.getElementById('accessCodeInput').focus();
+        }
+
+        function hideAccessModal() {
+            document.getElementById('accessModal').style.display = 'none';
+        }
+
+        async function verifyAccessCode() {
+            const code = document.getElementById('accessCodeInput').value;
+            try {
+                const res = await fetch(`${API_BASE}/verify-access`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    accessCode = code;
+                    localStorage.setItem('h3clinic_access_code', code);
+                    hideAccessModal();
+                    initializeApp();
+                } else {
+                    document.getElementById('accessError').style.display = 'block';
+                    document.getElementById('accessCodeInput').value = '';
+                    document.getElementById('accessCodeInput').focus();
+                }
+            } catch (err) {
+                document.getElementById('accessError').style.display = 'block';
+            }
+        }
+
+        // Helper function to make authenticated API calls
+        async function apiFetch(url, options = {}) {
+            const headers = {
+                ...options.headers,
+                'X-Access-Code': accessCode
+            };
+            const response = await fetch(url, { ...options, headers });
+            if (response.status === 401) {
+                localStorage.removeItem('h3clinic_access_code');
+                accessCode = '';
+                showAccessModal();
+                throw new Error('Access denied');
+            }
+            return response;
+        }
+
+        // Initialize app after access verification
+        function initializeApp() {
+            loadBatches();
+            loadPatients();
+            restoreDraft();
+            restoreStickyFields();
+            setupAutosave();
+            setupDragDrop();
+        }
+
+        // Check access on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (accessCode) {
+                // Verify stored access code
+                try {
+                    const res = await fetch(`${API_BASE}/verify-access`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ code: accessCode })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        initializeApp();
+                    } else {
+                        localStorage.removeItem('h3clinic_access_code');
+                        accessCode = '';
+                        showAccessModal();
+                    }
+                } catch (err) {
+                    showAccessModal();
+                }
+            } else {
+                showAccessModal();
+            }
+        });
+
+        // ========== DRAG & DROP ==========
+        function setupDragDrop() {
+            const area = document.getElementById('docUploadArea');
+            if (!area) return;
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
+                area.addEventListener(event, (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+            });
+            
+            ['dragenter', 'dragover'].forEach(event => {
+                area.addEventListener(event, () => area.classList.add('dragover'));
+            });
+            
+            ['dragleave', 'drop'].forEach(event => {
+                area.addEventListener(event, () => area.classList.remove('dragover'));
+            });
+            
+            area.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    handleFileUpload(files[0]);
+                }
+            });
+        }
+
+        // ========== BATCH MANAGEMENT ==========
+        async function loadBatches() {
+            try {
+                const res = await apiFetch(`${API_BASE}/batches`);
+                const batches = await res.json();
+                const select = document.getElementById('currentBatch');
+                const filterSelect = document.getElementById('filterBatch');
+                
+                select.innerHTML = '<option value="">-- No Batch --</option>';
+                filterSelect.innerHTML = '<option value="">All Batches</option>';
+                
+                batches.forEach(b => {
+                    select.innerHTML += `<option value="${b.id}">${b.batch_name}</option>`;
+                    filterSelect.innerHTML += `<option value="${b.id}">${b.batch_name}</option>`;
+                });
+
+                const savedBatch = localStorage.getItem('currentBatch');
+                if (savedBatch) {
+                    select.value = savedBatch;
+                    updateCurrentBatchName();
+                }
+            } catch (err) {
+                console.error('Error loading batches:', err);
+            }
+        }
+
+        async function createBatch() {
+            const name = document.getElementById('newBatchName').value.trim();
+            if (!name) {
+                showToast('Please enter a batch name', true);
+                return;
+            }
+            try {
+                const res = await apiFetch(`${API_BASE}/batches`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ batch_name: name })
+                });
+                if (res.ok) {
+                    const batch = await res.json();
+                    document.getElementById('newBatchName').value = '';
+                    await loadBatches();
+                    document.getElementById('currentBatch').value = batch.id;
+                    localStorage.setItem('currentBatch', batch.id);
+                    updateCurrentBatchName();
+                    showToast('Batch created!');
+                }
+            } catch (err) {
+                showToast('Error creating batch', true);
+            }
+        }
+
+        document.getElementById('currentBatch').addEventListener('change', (e) => {
+            localStorage.setItem('currentBatch', e.target.value);
+            updateCurrentBatchName();
+        });
+
+        function updateCurrentBatchName() {
+            const select = document.getElementById('currentBatch');
+            const name = select.options[select.selectedIndex]?.text || 'None';
+            document.getElementById('currentBatchName').textContent = name;
+        }
+
+        // ========== AUTOSAVE & DRAFT ==========
+        function setupAutosave() {
+            const form = document.getElementById('patientForm');
+            let autosaveTimer;
+            
+            form.addEventListener('input', () => {
+                clearTimeout(autosaveTimer);
+                autosaveTimer = setTimeout(saveDraft, 1000);
+            });
+        }
+
+        function saveDraft() {
+            const draft = {
+                sourceFileId: document.getElementById('sourceFileId').value,
+                name: document.getElementById('patientName').value,
+                dob: document.getElementById('patientDOB').value,
+                age: document.getElementById('patientAge').value,
+                gender: document.getElementById('patientGender').value,
+                contact: document.getElementById('patientContact').value,
+                email: document.getElementById('patientEmail').value,
+                address: document.getElementById('patientAddress').value,
+                intakeNotes: document.getElementById('intakeNotes').value,
+                hasUnknownFields: document.getElementById('hasUnknownFields').checked,
+                checklist: getChecklist()
+            };
+            
+            if (draft.name || draft.sourceFileId || draft.contact) {
+                localStorage.setItem('patientDraft', JSON.stringify(draft));
+                showDraftIndicator(true);
+            }
+        }
+
+        function restoreDraft() {
+            const draft = localStorage.getItem('patientDraft');
+            if (draft) {
+                const data = JSON.parse(draft);
+                document.getElementById('sourceFileId').value = data.sourceFileId || '';
+                document.getElementById('patientName').value = data.name || '';
+                document.getElementById('patientDOB').value = data.dob || '';
+                document.getElementById('patientAge').value = data.age || '';
+                document.getElementById('patientGender').value = data.gender || '';
+                document.getElementById('patientContact').value = data.contact || '';
+                document.getElementById('patientEmail').value = data.email || '';
+                document.getElementById('patientAddress').value = data.address || '';
+                document.getElementById('intakeNotes').value = data.intakeNotes || '';
+                document.getElementById('hasUnknownFields').checked = data.hasUnknownFields || false;
+                if (data.checklist) setChecklist(data.checklist);
+                showDraftIndicator(true);
+            }
+        }
+
+        function clearDraft() {
+            localStorage.removeItem('patientDraft');
+            document.getElementById('patientForm').reset();
+            clearChecklist();
+            showDraftIndicator(false);
+            showToast('Draft cleared');
+        }
+
+        function showDraftIndicator(show) {
+            const indicator = document.getElementById('draftIndicator');
+            indicator.style.display = show ? 'inline-flex' : 'none';
+        }
+
+        function restoreStickyFields() {
+            const scannedBy = localStorage.getItem('scannedBy');
+            if (scannedBy) document.getElementById('scannedBy').value = scannedBy;
+        }
+
+        document.getElementById('scannedBy').addEventListener('change', (e) => {
+            localStorage.setItem('scannedBy', e.target.value);
+        });
+
+        // ========== CHECKLIST ==========
+        function getChecklist() {
+            return {
+                idVerified: document.getElementById('checkId').checked,
+                dobVerified: document.getElementById('checkDOB').checked,
+                insuranceCopied: document.getElementById('checkInsurance').checked,
+                consentPresent: document.getElementById('checkConsent').checked,
+                contactVerified: document.getElementById('checkContact').checked
+            };
+        }
+
+        function setChecklist(checklist) {
+            document.getElementById('checkId').checked = checklist.idVerified || false;
+            document.getElementById('checkDOB').checked = checklist.dobVerified || false;
+            document.getElementById('checkInsurance').checked = checklist.insuranceCopied || false;
+            document.getElementById('checkConsent').checked = checklist.consentPresent || false;
+            document.getElementById('checkContact').checked = checklist.contactVerified || false;
+        }
+
+        function clearChecklist() {
+            document.getElementById('checkId').checked = false;
+            document.getElementById('checkDOB').checked = false;
+            document.getElementById('checkInsurance').checked = false;
+            document.getElementById('checkConsent').checked = false;
+            document.getElementById('checkContact').checked = false;
+        }
+
+        // ========== PATIENT FORM ==========
+        document.getElementById('patientForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            saveAndNextMode = false;
+            await checkAndSavePatient();
+        });
+
+        async function saveAndAddNext() {
+            saveAndNextMode = true;
+            await checkAndSavePatient();
+        }
+
+        async function checkAndSavePatient() {
+            const patient = buildPatientData();
+            
+            try {
+                const res = await apiFetch(`${API_BASE}/patients/check-duplicates`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patient)
+                });
+                const duplicates = await res.json();
+                
+                if (duplicates.length > 0) {
+                    pendingPatientData = patient;
+                    showDuplicateModal(duplicates);
+                } else {
+                    await savePatient(patient);
+                }
+            } catch (err) {
+                showToast('Error checking duplicates', true);
+            }
+        }
+
+        function buildPatientData() {
+            return {
+                name: document.getElementById('patientName').value,
+                date_of_birth: document.getElementById('patientDOB').value || null,
+                age: document.getElementById('patientAge').value || null,
+                gender: document.getElementById('patientGender').value || null,
+                contact: document.getElementById('patientContact').value || null,
+                email: document.getElementById('patientEmail').value || null,
+                address: document.getElementById('patientAddress').value || null,
+                source_file_id: document.getElementById('sourceFileId').value || null,
+                intake_batch_id: document.getElementById('currentBatch').value || null,
+                scanned_by: document.getElementById('scannedBy').value || null,
+                intake_notes: document.getElementById('intakeNotes').value || null,
+                has_unknown_fields: document.getElementById('hasUnknownFields').checked ? 1 : 0,
+                intake_checklist: JSON.stringify(getChecklist())
+            };
+        }
+
+        async function savePatient(patient) {
+            try {
+                const res = await apiFetch(`${API_BASE}/patients`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(patient)
+                });
+                
+                if (res.ok) {
+                    const savedPatient = await res.json();
+                    sessionCount++;
+                    document.getElementById('sessionCount').textContent = sessionCount;
+                    localStorage.removeItem('patientDraft');
+                    showDraftIndicator(false);
+                    showToast('✓ Patient saved!');
+                    
+                    if (saveAndNextMode) {
+                        clearFormKeepSticky();
+                    } else if (uploadAfterSave) {
+                        // Redirect to patient page with upload panel
+                        uploadAfterSave = false;
+                        viewPatientById(savedPatient.id, true);
+                        return;
+                    } else {
+                        document.getElementById('patientForm').reset();
+                        clearChecklist();
+                    }
+                    
+                    loadPatients();
+                } else {
+                    showToast('Error saving patient', true);
+                }
+            } catch (err) {
+                showToast('Error: ' + err.message, true);
+            }
+        }
+        
+        let uploadAfterSave = false;
+        
+        async function saveAndUpload() {
+            uploadAfterSave = true;
+            await checkAndSavePatient();
+        }
+
+        function clearFormKeepSticky() {
+            document.getElementById('sourceFileId').value = '';
+            document.getElementById('patientName').value = '';
+            document.getElementById('patientDOB').value = '';
+            document.getElementById('patientAge').value = '';
+            document.getElementById('patientGender').value = '';
+            document.getElementById('patientContact').value = '';
+            document.getElementById('patientEmail').value = '';
+            document.getElementById('patientAddress').value = '';
+            document.getElementById('intakeNotes').value = '';
+            document.getElementById('hasUnknownFields').checked = false;
+            clearChecklist();
+            document.getElementById('sourceFileId').focus();
+        }
+
+        // ========== DUPLICATE MODAL ==========
+        function showDuplicateModal(duplicates) {
+            const list = document.getElementById('duplicateList');
+            list.innerHTML = duplicates.map(d => `
+                <div class="duplicate-item">
+                    <div>
+                        <strong>${escapeHtml(d.name)}</strong><br>
+                        <small>DOB: ${d.date_of_birth || 'N/A'} | Phone: ${d.contact || 'N/A'} | Email: ${d.email || 'N/A'}</small>
+                    </div>
+                    <button class="btn btn-info btn-sm" onclick="viewPatientById(${d.id})">View</button>
+                </div>
+            `).join('');
+            document.getElementById('duplicateModal').classList.add('active');
+        }
+
+        function closeDuplicateModal() {
+            document.getElementById('duplicateModal').classList.remove('active');
+            pendingPatientData = null;
+        }
+
+        async function saveAnywayFromDuplicate() {
+            closeDuplicateModal();
+            if (pendingPatientData) {
+                await savePatient(pendingPatientData);
+                pendingPatientData = null;
+            }
+        }
+
+        // ========== EXPORT TO EXCEL ==========
+        async function exportToExcel() {
+            try {
+                const btn = event.target;
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '⏳ Exporting...';
+                btn.disabled = true;
+                
+                const response = await apiFetch(`${API_BASE}/patients/export/excel`);
+                
+                if (!response.ok) {
+                    throw new Error('Export failed');
+                }
+                
+                // Get the blob from response
+                const blob = await response.blob();
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Get filename from header or use default
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `patients_export_${new Date().toISOString().split('T')[0]}.xlsx`;
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename="(.+)"/);
+                    if (match) filename = match[1];
+                }
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                btn.innerHTML = '✅ Exported!';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 2000);
+                
+            } catch (err) {
+                console.error('Export error:', err);
+                alert('Failed to export patients to Excel. Please try again.');
+                event.target.innerHTML = '📊 Export Excel';
+                event.target.disabled = false;
+            }
+        }
+
+        // ========== PATIENTS LIST ==========
+        let allPatients = [];
+        
+        async function loadPatients() {
+            try {
+                const batchFilter = document.getElementById('filterBatch').value;
+                const url = batchFilter 
+                    ? `${API_BASE}/patients?batch_id=${batchFilter}`
+                    : `${API_BASE}/patients`;
+                    
+                const res = await apiFetch(url);
+                allPatients = await res.json();
+                
+                renderPatientsTable(allPatients);
+            } catch (err) {
+                console.error('Error loading patients:', err);
+            }
+        }
+        
+        function renderPatientsTable(patients) {
+            document.getElementById('patientCount').textContent = `${patients.length} patients`;
+            
+            const tbody = document.getElementById('patientsBody');
+            tbody.innerHTML = patients.map(p => {
+                // Check if patient has chart data
+                const hasChart = p.surgery_history_json || p.problem_list_json || p.medications_json;
+                const chartBadge = hasChart ? '<span class="badge badge-success">✓</span>' : '<span class="badge badge-warning">—</span>';
+                
+                return `
+                    <tr data-name="${escapeHtml(p.name).toLowerCase()}">
+                        <td>${p.id}</td>
+                        <td>${escapeHtml(p.name)}</td>
+                        <td>${p.date_of_birth || '-'}</td>
+                        <td>${p.contact || '-'}</td>
+                        <td>${chartBadge}</td>
+                        <td class="actions">
+                            <button class="btn btn-info btn-sm" onclick="viewPatientById(${p.id})">Open</button>
+                            <button class="btn btn-danger btn-sm" onclick="deletePatient(${p.id})">✕</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+        
+        function filterPatientsTable() {
+            const search = document.getElementById('searchPatients').value.toLowerCase().trim();
+            if (!search) {
+                renderPatientsTable(allPatients);
+                return;
+            }
+            const filtered = allPatients.filter(p => p.name.toLowerCase().includes(search));
+            renderPatientsTable(filtered);
+        }
+
+        async function viewPatientById(id, openUpload = false) {
+            try {
+                const res = await apiFetch(`${API_BASE}/patients/${id}`);
+                const p = await res.json();
+                viewPatient(p, openUpload);
+            } catch (err) {
+                showToast('Error loading patient', true);
+            }
+        }
+
+        function viewPatient(p, openUpload = false) {
+            currentPatientId = p.id;
+            document.getElementById('visitPatientId').value = p.id;
+            document.getElementById('modalTitle').textContent = `Patient: ${p.name}`;
+            
+            document.getElementById('patientInfo').innerHTML = `
+                <h3>👤 ${escapeHtml(p.name)}</h3>
+                <p><strong>ID:</strong> ${p.id} | <strong>DOB:</strong> ${p.date_of_birth || 'N/A'} | <strong>Phone:</strong> ${p.contact || 'N/A'}</p>
+                ${p.email ? `<p><strong>Email:</strong> ${p.email}</p>` : ''}
+                ${p.address ? `<p><strong>Address:</strong> ${p.address}</p>` : ''}
+                <div style="margin-top:10px;">
+                    <a href="/patient-reports.html?patientId=${p.id}" class="btn btn-info btn-sm" target="_blank">📊 View Reports</a>
+                </div>
+            `;
+
+            // Render the patient chart
+            renderPatientChart(p);
+            
+            // Check LLM status
+            checkLLMHealth();
+            
+            // Load documents
+            loadPatientDocuments(p.id);
+            
+            // If openUpload flag, scroll to document section
+            if (openUpload) {
+                setTimeout(() => {
+                    const docSection = document.getElementById('documentsSection');
+                    if (docSection) docSection.scrollIntoView({ behavior: 'smooth' });
+                    showToast('📤 Patient created! Upload documents below.', false);
+                }, 300);
+            }
+
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('visitDate').value = now.toISOString().slice(0, 16);
+
+            loadVisits(p.id);
+            closeDuplicateModal();
+            document.getElementById('patientModal').classList.add('active');
+        }
+
+        function renderPatientChart(p) {
+            // Parse chart data
+            let surgeries = [], problems = [], meds = [], allergies = [];
+            try { surgeries = JSON.parse(p.surgery_history_json) || []; } catch(e) {}
+            try { problems = JSON.parse(p.problem_list_json) || []; } catch(e) {}
+            try { meds = JSON.parse(p.medications_json) || []; } catch(e) {}
+            try { allergies = JSON.parse(p.allergies_json) || []; } catch(e) {}
+            
+            // Summary
+            const summaryDiv = document.getElementById('chartSummary');
+            if (p.chart_summary) {
+                summaryDiv.innerHTML = `<div style="background:white;padding:10px;border-radius:5px;font-size:13px;white-space:pre-wrap;max-height:150px;overflow-y:auto;">${escapeHtml(p.chart_summary)}</div>`;
+            } else {
+                summaryDiv.innerHTML = '';
+            }
+            
+            // Surgeries - handle both old format { procedure, date } and new format { procedures: [], date }
+            const surgeriesDiv = document.getElementById('surgeriesList');
+            if (surgeries.length > 0) {
+                surgeriesDiv.innerHTML = surgeries.map(s => {
+                    // New format with procedures array
+                    if (Array.isArray(s.procedures) && s.procedures.length > 0) {
+                        return `
+                            <div class="surgery-item">
+                                <strong>${s.procedures.map(p => escapeHtml(p)).join(', ')}</strong>
+                                ${s.date ? `<br><small>📅 ${s.date}</small>` : ''}
+                                ${s.surgeon ? `<br><small>👨‍⚕️ ${escapeHtml(s.surgeon)}</small>` : ''}
+                            </div>
+                        `;
+                    }
+                    // Old format with single procedure
+                    return `
+                        <div class="surgery-item">
+                            <strong>${escapeHtml(s.procedure || 'Unknown procedure')}</strong>
+                            ${s.date ? `<br><small>📅 ${s.date}</small>` : ''}
+                            ${s.surgeon ? `<br><small>👨‍⚕️ ${escapeHtml(s.surgeon)}</small>` : ''}
+                            ${s.laterality ? `<small> (${s.laterality})</small>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                surgeriesDiv.innerHTML = '<span style="color:#999;">No surgeries recorded</span>';
+            }
+            
+            // Problems/Diagnoses
+            const problemsDiv = document.getElementById('problemsList');
+            if (problems.length > 0) {
+                problemsDiv.innerHTML = '<ul>' + problems.map(prob => {
+                    const text = typeof prob === 'string' ? prob : (prob.name || prob.diagnosis || JSON.stringify(prob));
+                    return `<li>${escapeHtml(text)}</li>`;
+                }).join('') + '</ul>';
+            } else {
+                problemsDiv.innerHTML = '<span style="color:#999;">No problems recorded</span>';
+            }
+            
+            // Medications
+            const medsDiv = document.getElementById('medsList');
+            if (meds.length > 0) {
+                medsDiv.innerHTML = meds.map(m => {
+                    const text = typeof m === 'string' ? m : `${m.name || 'Unknown'}${m.dose ? ' ' + m.dose : ''}${m.frequency ? ' ' + m.frequency : ''}`;
+                    return `<span class="med-item">💊 ${escapeHtml(text)}</span>`;
+                }).join('');
+            } else {
+                medsDiv.innerHTML = '<span style="color:#999;">No medications recorded</span>';
+            }
+            
+            // Allergies
+            const allergiesDiv = document.getElementById('allergiesList');
+            if (allergies.length > 0) {
+                allergiesDiv.innerHTML = allergies.map(a => {
+                    const text = typeof a === 'string' ? a : `${a.substance || 'Unknown'}${a.reaction ? ' (' + a.reaction + ')' : ''}`;
+                    return `<span class="allergy-item">⚠️ ${escapeHtml(text)}</span>`;
+                }).join('');
+            } else {
+                allergiesDiv.innerHTML = '<span style="color:#999;">NKDA</span>';
+            }
+            
+            // Last updated
+            const lastUpdatedEl = document.getElementById('chartLastUpdated');
+            if (p.chart_last_updated_at) {
+                lastUpdatedEl.textContent = `Chart last updated: ${formatDate(p.chart_last_updated_at)}`;
+            } else {
+                lastUpdatedEl.textContent = 'Chart not yet populated. Upload documents to auto-extract data.';
+            }
+        }
+
+        // ========== DOCUMENT MANAGEMENT ==========
+        async function loadPatientDocuments(patientId) {
+            try {
+                const res = await apiFetch(`${API_BASE}/patients/${patientId}/documents`);
+                const docs = await res.json();
+                renderDocumentList(docs);
+            } catch (err) {
+                console.error('Error loading documents:', err);
+            }
+        }
+
+        function renderDocumentList(docs) {
+            const container = document.getElementById('docList');
+            if (docs.length === 0) {
+                container.innerHTML = '<p style="color:#888;font-size:13px;">No documents uploaded yet</p>';
+                return;
+            }
+            
+            // Check if any document needs review
+            const hasNeedsReview = docs.some(d => d.status === 'needs_review');
+            
+            let html = '';
+            
+            // Show warning banner if any docs need review
+            if (hasNeedsReview) {
+                html += `
+                    <div style="background:#fff3e0;border:1px solid #ffb74d;border-radius:5px;padding:10px;margin-bottom:10px;">
+                        <strong>⚠️ AI extraction incomplete</strong> — Some documents need manual review before chart can be updated.
+                    </div>
+                `;
+            }
+            
+            html += docs.map(d => {
+                let statusIcon, statusColor, statusBg;
+                switch(d.status) {
+                    case 'merged':
+                        statusIcon = '✅'; statusColor = '#2e7d32'; statusBg = '#e8f5e9';
+                        break;
+                    case 'extracted':
+                        statusIcon = '📋'; statusColor = '#1565c0'; statusBg = '#e3f2fd';
+                        break;
+                    case 'needs_review':
+                        statusIcon = '⚠️'; statusColor = '#ef6c00'; statusBg = '#fff3e0';
+                        break;
+                    case 'processing':
+                        statusIcon = '⏳'; statusColor = '#7b1fa2'; statusBg = '#f3e5f5';
+                        break;
+                    case 'error':
+                        statusIcon = '❌'; statusColor = '#c62828'; statusBg = '#ffebee';
+                        break;
+                    default:
+                        statusIcon = '○'; statusColor = '#757575'; statusBg = '#f5f5f5';
+                }
+                
+                const hasExtraction = d.extracted_json && ['merged', 'extracted', 'needs_review'].includes(d.status);
+                const showApprove = d.status === 'needs_review' && d.extracted_json;
+                
+                return `
+                    <div class="doc-item" style="border-left:3px solid ${statusColor};">
+                        <div class="doc-info">
+                            <div class="doc-name">📄 ${escapeHtml(d.original_filename)}</div>
+                            <div style="background:${statusBg};color:${statusColor};padding:2px 8px;border-radius:3px;font-size:12px;display:inline-block;">
+                                ${statusIcon} ${d.status}
+                                ${d.confidence ? ` • ${(d.confidence * 100).toFixed(0)}% confidence` : ''}
+                            </div>
+                            ${d.error_message ? `<div style="color:#c62828;font-size:11px;margin-top:3px;">${escapeHtml(d.error_message)}</div>` : ''}
+                        </div>
+                        <div class="doc-actions">
+                            <a href="/document-view.html?documentId=${d.id}" class="btn btn-primary btn-sm" style="text-decoration:none;">📋 View</a>
+                            ${d.stored_path ? `<a href="/uploads/${d.stored_path.split('/').pop()}" target="_blank" class="btn btn-secondary btn-sm" style="text-decoration:none;">⬇ PDF</a>` : ''}
+                            ${d.status === 'uploaded' ? `<button class="btn btn-warning btn-sm" onclick="processDocument(${d.id})">🤖 Process</button>` : ''}
+                            ${d.status === 'merged' || d.status === 'extracted' ? `<button class="btn btn-outline btn-sm" onclick="processDocument(${d.id})">🔄 Re-run</button>` : ''}
+                            ${showApprove ? `<button class="btn btn-success btn-sm" onclick="approveDocument(${d.id})">✓ Approve & Merge</button>` : ''}
+                            ${hasExtraction ? `<button class="btn btn-info btn-sm" onclick="viewExtraction(${d.id})">🔍 Extraction</button>` : ''}
+                            <button class="btn btn-danger btn-sm" onclick="deleteDocument(${d.id})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = html;
+        }
+
+        async function uploadDocument(event) {
+            const file = event.target.files[0];
+            if (file) await handleFileUpload(file);
+            event.target.value = '';
+        }
+
+        async function handleFileUpload(file) {
+            if (!currentPatientId) {
+                showToast('No patient selected', true);
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                showToast('Uploading...');
+                const res = await apiFetch(`${API_BASE}/patients/${currentPatientId}/documents`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (res.ok) {
+                    showToast('✓ Document uploaded!');
+                    loadPatientDocuments(currentPatientId);
+                } else {
+                    const err = await res.json();
+                    showToast(err.message || 'Upload failed', true);
+                }
+            } catch (err) {
+                showToast('Upload error: ' + err.message, true);
+            }
+        }
+
+        async function processDocument(documentId) {
+            try {
+                showToast('🤖 Processing with AI (two-pass extraction)...');
+                loadPatientDocuments(currentPatientId); // Show processing status
+                
+                const res = await apiFetch(`${API_BASE}/documents/${documentId}/process`, {
+                    method: 'POST'
+                });
+                
+                const result = await res.json();
+                
+                if (res.ok) {
+                    if (result.needsReview) {
+                        showToast('⚠️ Document processed but needs review before chart update', true);
+                        if (result.reviewReasons?.length > 0) {
+                            console.log('Review reasons:', result.reviewReasons);
+                        }
+                    } else if (result.merged) {
+                        showToast('✅ Document processed and merged into chart!');
+                    } else {
+                        showToast('✓ Document processed');
+                    }
+                    loadPatientDocuments(currentPatientId);
+                    viewPatientById(currentPatientId);
+                } else {
+                    showToast('Processing error: ' + (result.message || 'Unknown error'), true);
+                    loadPatientDocuments(currentPatientId);
+                }
+            } catch (err) {
+                showToast('Processing error: ' + err.message, true);
+                loadPatientDocuments(currentPatientId);
+            }
+        }
+
+        async function approveDocument(documentId) {
+            if (!confirm('Approve this extraction and merge into patient chart?\n\nThis will add the extracted data to the patient record.')) {
+                return;
+            }
+            
+            try {
+                showToast('Merging into chart...');
+                const res = await apiFetch(`${API_BASE}/documents/${documentId}/approve`, {
+                    method: 'POST'
+                });
+                
+                if (res.ok) {
+                    showToast('✅ Document approved and merged into chart!');
+                    loadPatientDocuments(currentPatientId);
+                    viewPatientById(currentPatientId);
+                } else {
+                    const err = await res.json();
+                    showToast('Approval error: ' + (err.message || 'Unknown error'), true);
+                }
+            } catch (err) {
+                showToast('Approval error: ' + err.message, true);
+            }
+        }
+
+        async function viewExtraction(documentId) {
+            try {
+                const res = await apiFetch(`${API_BASE}/documents/${documentId}/extraction`);
+                const extraction = await res.json();
+                
+                let data = {};
+                try { data = JSON.parse(extraction.extracted_json); } catch(e) {}
+                
+                const confidence = extraction.confidence || 0;
+                const confidenceClass = confidence >= 0.7 ? 'confidence-high' : (confidence >= 0.4 ? 'confidence-medium' : 'confidence-low');
+                
+                document.getElementById('extractionModalBody').innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <strong>Model:</strong> ${extraction.model || 'Unknown'} | 
+                        <strong>Confidence:</strong> ${(confidence * 100).toFixed(0)}%
+                        <div class="confidence-bar"><div class="confidence-fill ${confidenceClass}" style="width: ${confidence * 100}%"></div></div>
+                    </div>
+                    
+                    ${extraction.summary ? `<div class="extraction-field" style="margin-bottom:15px;"><label>Summary</label><div class="value">${escapeHtml(extraction.summary)}</div></div>` : ''}
+                    
+                    <div class="extraction-grid">
+                        ${data.patient?.name ? `<div class="extraction-field"><label>Patient Name</label><div class="value">${escapeHtml(data.patient.name)}</div></div>` : ''}
+                        ${data.patient?.dob ? `<div class="extraction-field"><label>DOB</label><div class="value">${data.patient.dob}</div></div>` : ''}
+                        ${data.patient?.mrn ? `<div class="extraction-field"><label>MRN</label><div class="value">${data.patient.mrn}</div></div>` : ''}
+                        ${data.encounter?.date ? `<div class="extraction-field"><label>Encounter Date</label><div class="value">${data.encounter.date}</div></div>` : ''}
+                        ${data.encounter?.facility ? `<div class="extraction-field"><label>Facility</label><div class="value">${escapeHtml(data.encounter.facility)}</div></div>` : ''}
+                        ${data.encounter?.provider ? `<div class="extraction-field"><label>Provider</label><div class="value">${escapeHtml(data.encounter.provider)}</div></div>` : ''}
+                        ${data.encounter?.chief_complaint ? `<div class="extraction-field" style="grid-column:span 2;"><label>Chief Complaint</label><div class="value">${escapeHtml(data.encounter.chief_complaint)}</div></div>` : ''}
+                    </div>
+                    
+                    ${data.vitals && Object.values(data.vitals).some(v => v) ? `
+                        <div class="extraction-list">
+                            <h5>Vitals</h5>
+                            <p>${data.vitals.bp ? 'BP: ' + data.vitals.bp + ' | ' : ''}${data.vitals.hr ? 'HR: ' + data.vitals.hr + ' | ' : ''}${data.vitals.temp ? 'Temp: ' + data.vitals.temp + ' | ' : ''}${data.vitals.spo2 ? 'SpO2: ' + data.vitals.spo2 : ''}</p>
+                        </div>
+                    ` : ''}
+                    
+                    ${data.diagnoses?.length > 0 ? `
+                        <div class="extraction-list"><h5>Diagnoses</h5><ul>${data.diagnoses.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul></div>
+                    ` : ''}
+                    
+                    ${data.problem_list?.length > 0 ? `
+                        <div class="extraction-list"><h5>Problem List</h5><ul>${data.problem_list.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul></div>
+                    ` : ''}
+                    
+                    ${data.medications?.length > 0 ? `
+                        <div class="extraction-list"><h5>Medications</h5><ul>${data.medications.map(m => `<li>${escapeHtml(m.name || 'Unknown')} ${m.dose || ''} ${m.route || ''} ${m.frequency || ''}</li>`).join('')}</ul></div>
+                    ` : ''}
+                    
+                    ${data.allergies?.length > 0 ? `
+                        <div class="extraction-list"><h5>Allergies</h5><ul>${data.allergies.map(a => `<li>${escapeHtml(a.substance || 'Unknown')}${a.reaction ? ' (' + escapeHtml(a.reaction) + ')' : ''}</li>`).join('')}</ul></div>
+                    ` : ''}
+                    
+                    ${data.labs?.length > 0 ? `
+                        <div class="extraction-list"><h5>Labs</h5><ul>${data.labs.map(l => `<li>${escapeHtml(l.name || 'Test')}: ${l.value || 'N/A'} ${l.units || ''} ${l.date ? '(' + l.date + ')' : ''}</li>`).join('')}</ul></div>
+                    ` : ''}
+                    
+                    ${data.procedures?.length > 0 ? `
+                        <div class="extraction-list"><h5>Procedures</h5><ul>${data.procedures.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul></div>
+                    ` : ''}
+                    
+                    ${data.disposition_followup?.length > 0 ? `
+                        <div class="extraction-list"><h5>Disposition/Follow-up</h5><ul>${data.disposition_followup.map(d => `<li>${escapeHtml(d)}</li>`).join('')}</ul></div>
+                    ` : ''}
+                    
+                    ${data.notes?.length > 0 ? `
+                        <div class="extraction-list" style="background:#fff3cd;"><h5>Extraction Notes</h5><ul>${data.notes.map(n => `<li>${escapeHtml(n)}</li>`).join('')}</ul></div>
+                    ` : ''}
+                    
+                    <div style="margin-top:20px;">
+                        <button class="btn btn-secondary" onclick="closeExtractionModal()">Close</button>
+                    </div>
+                `;
+                
+                document.getElementById('extractionModal').classList.add('active');
+            } catch (err) {
+                showToast('Error loading extraction: ' + err.message, true);
+            }
+        }
+
+        function closeExtractionModal() {
+            document.getElementById('extractionModal').classList.remove('active');
+        }
+
+        async function deleteDocument(documentId) {
+            if (!confirm('Delete this document and its extraction?')) return;
+            try {
+                await apiFetch(`${API_BASE}/documents/${documentId}`, { method: 'DELETE' });
+                loadPatientDocuments(currentPatientId);
+                showToast('Document deleted');
+            } catch (err) {
+                showToast('Error deleting document', true);
+            }
+        }
+
+        // ========== CHART RESET ==========
+        async function resetPatientChart() {
+            if (!currentPatientId) return;
+            if (!confirm('⚠️ Reset chart? This will clear all auto-extracted data (surgeries, diagnoses, medications, allergies).\n\nYou can re-process documents after resetting.')) return;
+            
+            try {
+                const res = await apiFetch(`${API_BASE}/patients/${currentPatientId}/chart/reset`, {
+                    method: 'POST'
+                });
+                
+                if (res.ok) {
+                    showToast('✓ Chart reset. Re-process documents to repopulate.');
+                    viewPatientById(currentPatientId);
+                } else {
+                    const err = await res.json();
+                    showToast('Reset error: ' + err.message, true);
+                }
+            } catch (err) {
+                showToast('Reset error: ' + err.message, true);
+            }
+        }
+
+        // ========== LLM HEALTH CHECK ==========
+        async function checkLLMHealth() {
+            const statusEl = document.getElementById('llmStatus');
+            if (!statusEl) return;
+            
+            try {
+                const res = await apiFetch(`${API_BASE}/llm/health`);
+                const health = await res.json();
+                
+                if (health.status === 'online') {
+                    const hasGoodModel = health.hasRecommendedModel;
+                    statusEl.innerHTML = hasGoodModel 
+                        ? '🟢 LLM Online' 
+                        : '🟡 LLM (no model)';
+                    statusEl.style.background = hasGoodModel ? '#e8f5e9' : '#fff3e0';
+                    statusEl.style.color = hasGoodModel ? '#2e7d32' : '#ef6c00';
+                    statusEl.title = `Ollama: ${health.models.join(', ') || 'No models'}`;
+                } else {
+                    statusEl.innerHTML = '🔴 LLM Offline';
+                    statusEl.style.background = '#ffebee';
+                    statusEl.style.color = '#c62828';
+                    statusEl.title = 'Using regex fallback. Run: ollama serve';
+                }
+            } catch (err) {
+                statusEl.innerHTML = '⚪ LLM Unknown';
+                statusEl.style.background = '#f5f5f5';
+                statusEl.style.color = '#757575';
+            }
+        }
+
+        async function deletePatient(id) {
+            if (!confirm('Are you sure you want to delete this patient?')) return;
+            try {
+                await apiFetch(`${API_BASE}/patients/${id}`, { method: 'DELETE' });
+                loadPatients();
+                showToast('Patient deleted');
+            } catch (err) {
+                showToast('Error deleting patient', true);
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('patientModal').classList.remove('active');
+            document.getElementById('visitForm').reset();
+            currentPatientId = null;
+        }
+
+        document.getElementById('patientModal').addEventListener('click', (e) => {
+            if (e.target.id === 'patientModal') closeModal();
+        });
+
+        document.getElementById('extractionModal')?.addEventListener('click', (e) => {
+            if (e.target.id === 'extractionModal') closeExtractionModal();
+        });
+
+        // ========== VISITS ==========
+        async function loadVisits(patientId) {
+            try {
+                const res = await apiFetch(`${API_BASE}/patients/${patientId}/visits`);
+                const visits = await res.json();
+                const container = document.getElementById('visitsList');
+
+                if (visits.length === 0) {
+                    container.innerHTML = '<div class="empty-state">No visits recorded yet</div>';
+                    return;
+                }
+
+                container.innerHTML = visits.map(v => {
+                    let vitals = {};
+                    try { vitals = v.vitals_json ? JSON.parse(v.vitals_json) : {}; } catch (e) {}
+
+                    const vitalsHtml = Object.keys(vitals).length > 0 ? `
+                        <div class="vitals-box">
+                            <strong>Vitals:</strong> 
+                            ${vitals.bp ? `BP: ${vitals.bp}` : ''} 
+                            ${vitals.hr ? `| HR: ${vitals.hr} bpm` : ''} 
+                            ${vitals.temp ? `| Temp: ${vitals.temp}°F` : ''} 
+                            ${vitals.weight ? `| Weight: ${vitals.weight} kg` : ''}
+                        </div>
+                    ` : '';
+
+                    return `
+                        <div class="visit-card">
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <h4>📅 ${formatDate(v.visit_date)}</h4>
+                                <button class="btn btn-danger btn-sm" onclick="deleteVisit(${v.id}, ${v.patient_id})">Delete</button>
+                            </div>
+                            <div class="visit-detail">
+                                <p><strong>Chief Complaint:</strong> ${v.chief_complaint || 'N/A'}</p>
+                                <p><strong>Diagnosis:</strong> ${v.diagnosis || 'N/A'}</p>
+                                <p><strong>Assessment:</strong> ${v.assessment || 'N/A'}</p>
+                                <p><strong>Plan:</strong> ${v.plan || 'N/A'}</p>
+                            </div>
+                            ${vitalsHtml}
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('Error loading visits:', err);
+            }
+        }
+
+        document.getElementById('visitForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const patientId = document.getElementById('visitPatientId').value;
+
+            const vitals = {
+                bp: document.getElementById('vitalsBP').value || null,
+                hr: document.getElementById('vitalsHR').value || null,
+                temp: document.getElementById('vitalsTemp').value || null,
+                weight: document.getElementById('vitalsWeight').value || null
+            };
+            Object.keys(vitals).forEach(k => vitals[k] === null && delete vitals[k]);
+
+            const visit = {
+                visit_date: document.getElementById('visitDate').value,
+                chief_complaint: document.getElementById('chiefComplaint').value || null,
+                vitals_json: Object.keys(vitals).length > 0 ? JSON.stringify(vitals) : null,
+                assessment: document.getElementById('assessment').value || null,
+                diagnosis: document.getElementById('diagnosis').value || null,
+                plan: document.getElementById('plan').value || null
+            };
+
+            try {
+                const res = await apiFetch(`${API_BASE}/patients/${patientId}/visits`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(visit)
+                });
+                if (res.ok) {
+                    document.getElementById('chiefComplaint').value = '';
+                    document.getElementById('vitalsBP').value = '';
+                    document.getElementById('vitalsHR').value = '';
+                    document.getElementById('vitalsTemp').value = '';
+                    document.getElementById('vitalsWeight').value = '';
+                    document.getElementById('assessment').value = '';
+                    document.getElementById('diagnosis').value = '';
+                    document.getElementById('plan').value = '';
+                    loadVisits(patientId);
+                    showToast('Visit added!');
+                }
+            } catch (err) {
+                showToast('Error adding visit', true);
+            }
+        });
+
+        async function deleteVisit(visitId, patientId) {
+            if (!confirm('Delete this visit?')) return;
+            try {
+                await apiFetch(`${API_BASE}/visits/${visitId}`, { method: 'DELETE' });
+                loadVisits(patientId);
+            } catch (err) {
+                showToast('Error deleting visit', true);
+            }
+        }
+
+        // ========== UTILITIES ==========
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = isError ? 'toast error show' : 'toast show';
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleString('en-US', {
+                year: 'numeric', month: 'short', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>

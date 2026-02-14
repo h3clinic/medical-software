@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Viewer - H3 Clinic</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f7fafc; color: #2d3748; }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; padding: 16px 24px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .header h1 { font-size: 1.5rem; font-weight: 600; }
+        .header-actions { display: flex; gap: 12px; }
+        
+        .breadcrumb { padding: 12px 24px; background: white; border-bottom: 1px solid #e2e8f0; font-size: 0.9rem; }
+        .breadcrumb a { color: #4a5568; text-decoration: none; }
+        .breadcrumb a:hover { color: #667eea; }
+        .breadcrumb span { color: #a0aec0; margin: 0 8px; }
+        
+        .main-container { display: flex; height: calc(100vh - 120px); }
+        
+        /* PDF Panel */
+        .pdf-panel { width: 50%; background: #1a202c; display: flex; flex-direction: column; }
+        .pdf-header {
+            padding: 12px 16px; background: #2d3748; color: white;
+            display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem;
+        }
+        .pdf-header a { color: #63b3ed; text-decoration: none; }
+        .pdf-frame { flex: 1; border: none; background: white; }
+        .no-pdf { flex: 1; display: flex; align-items: center; justify-content: center; color: #a0aec0; font-size: 1.1rem; }
+        
+        /* Info Panel */
+        .info-panel { width: 50%; overflow-y: auto; background: #f7fafc; }
+        
+        /* Action Bar */
+        .action-bar {
+            padding: 16px 20px; background: white; border-bottom: 1px solid #e2e8f0;
+            display: flex; gap: 12px; flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 16px; border-radius: 6px; font-size: 0.9rem;
+            cursor: pointer; border: none; font-weight: 500;
+            display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+        }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5a67d8; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover { background: #38a169; }
+        .btn-warning { background: #ed8936; color: white; }
+        .btn-warning:hover { background: #dd6b20; }
+        .btn-danger { background: #fc8181; color: white; }
+        .btn-danger:hover { background: #f56565; }
+        .btn-secondary { background: #e2e8f0; color: #4a5568; }
+        .btn-secondary:hover { background: #cbd5e0; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-sm { padding: 6px 10px; font-size: 0.8rem; }
+        
+        /* Status Banner */
+        .status-banner { padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+        .status-banner.merged { background: #c6f6d5; color: #276749; }
+        .status-banner.needs_review { background: #feebc8; color: #c05621; }
+        .status-banner.extracted { background: #bee3f8; color: #2c5282; }
+        .status-banner.processing { background: #e9d8fd; color: #553c9a; }
+        .status-banner.error { background: #fed7d7; color: #c53030; }
+        .status-icon { font-size: 1.2rem; }
+        
+        /* Conflict Banner */
+        .conflict-banner {
+            padding: 16px 20px; background: #fed7d7; border: 2px solid #fc8181;
+            border-radius: 8px; margin: 12px 20px;
+        }
+        .conflict-banner h3 { color: #c53030; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+        .conflict-item {
+            background: white; padding: 12px; border-radius: 6px; margin-top: 8px;
+            border-left: 4px solid #fc8181;
+        }
+        .conflict-item .field { font-weight: 600; color: #c53030; }
+        .conflict-item .existing { color: #718096; font-size: 0.9rem; }
+        .conflict-item .incoming { color: #2d3748; font-weight: 500; }
+        
+        /* Section */
+        .section { padding: 20px; border-bottom: 1px solid #e2e8f0; }
+        .section-title {
+            font-size: 1rem; font-weight: 600; margin-bottom: 12px;
+            color: #2d3748; display: flex; align-items: center; gap: 8px;
+        }
+        
+        /* Extraction Summary */
+        .summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .summary-item {
+            background: white; padding: 12px; border-radius: 8px;
+            border: 1px solid #e2e8f0; position: relative;
+        }
+        .summary-label { font-size: 0.75rem; color: #718096; text-transform: uppercase; }
+        .summary-value { font-size: 1rem; font-weight: 600; color: #2d3748; margin-top: 4px; }
+        .summary-item .conf-badge { position: absolute; top: 8px; right: 8px; }
+        
+        /* Report List */
+        .report-list { display: flex; flex-direction: column; gap: 8px; }
+        .report-item {
+            background: white; padding: 14px 16px; border-radius: 8px;
+            border: 1px solid #e2e8f0; cursor: pointer; transition: all 0.2s;
+        }
+        .report-item:hover { border-color: #667eea; }
+        .report-item.active { border-color: #667eea; background: #f0f5ff; }
+        .report-title { font-weight: 600; color: #2d3748; }
+        .report-meta { font-size: 0.85rem; color: #718096; margin-top: 4px; }
+        .report-type { 
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 0.75rem; background: #e2e8f0; color: #4a5568; margin-top: 6px;
+        }
+        .report-type.document_render { background: #c6f6d5; color: #276749; }
+        .report-type.document_digest { background: #faf089; color: #744210; }
+        
+        /* Confidence Badge */
+        .confidence-badge, .conf-badge {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 4px 10px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;
+        }
+        .confidence-badge.high, .conf-badge.high { background: #c6f6d5; color: #276749; }
+        .confidence-badge.medium, .conf-badge.medium { background: #feebc8; color: #c05621; }
+        .confidence-badge.low, .conf-badge.low { background: #fed7d7; color: #c53030; }
+        .conf-badge.unknown { background: #e2e8f0; color: #718096; }
+        
+        /* Source Links Panel */
+        .source-panel {
+            background: #edf2f7; padding: 16px 20px; border-radius: 8px; margin: 0 20px 20px;
+        }
+        .source-panel h4 { font-size: 0.9rem; color: #4a5568; margin-bottom: 12px; }
+        .source-links { display: flex; flex-wrap: wrap; gap: 8px; }
+        .source-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 14px; background: white; border-radius: 6px;
+            border: 1px solid #e2e8f0; color: #4a5568; text-decoration: none;
+            font-size: 0.85rem; transition: all 0.2s;
+        }
+        .source-link:hover { border-color: #667eea; color: #667eea; }
+        .source-link.disabled { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+        
+        /* Merge Approval Panel */
+        .merge-panel {
+            background: white; padding: 20px; border-radius: 8px;
+            margin: 0 20px 20px; border: 2px solid #667eea;
+        }
+        .merge-panel h4 { color: #2d3748; margin-bottom: 12px; }
+        .merge-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+        .merge-option {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px; background: #f7fafc; border-radius: 6px;
+        }
+        .merge-option input[type="checkbox"] { width: 18px; height: 18px; }
+        .merge-option label { flex: 1; cursor: pointer; }
+        .merge-option .count { font-size: 0.85rem; color: #718096; }
+        .merge-option.conflict { background: #fed7d7; }
+        .merge-option.conflict label { color: #c53030; }
+        
+        /* Missing Fields Warning */
+        .missing-fields {
+            background: #fef3cd; border: 1px solid #ffc107; border-radius: 8px;
+            padding: 12px; margin: 12px 20px;
+        }
+        .missing-fields h4 { color: #856404; font-size: 0.9rem; margin-bottom: 8px; }
+        .missing-tag {
+            display: inline-block; padding: 4px 8px; background: white;
+            border-radius: 4px; font-size: 0.8rem; color: #856404; margin: 2px;
+        }
+        
+        /* Loading & Empty */
+        .loading {
+            display: flex; align-items: center; justify-content: center;
+            padding: 40px; color: #718096;
+        }
+        .loading::after {
+            content: ''; width: 24px; height: 24px; border: 3px solid #e2e8f0;
+            border-top-color: #667eea; border-radius: 50%;
+            animation: spin 1s linear infinite; margin-left: 12px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .empty-state { padding: 40px; text-align: center; color: #a0aec0; }
+        
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 20px; right: 20px; padding: 14px 20px;
+            background: #2d3748; color: white; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(100px); opacity: 0; transition: all 0.3s ease;
+        }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .toast.success { background: #48bb78; }
+        .toast.error { background: #fc8181; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📄 Document Viewer</h1>
+        <div class="header-actions">
+            <button class="btn btn-secondary" onclick="goBack()">← Back</button>
+        </div>
+    </div>
+    
+    <div class="breadcrumb">
+        <a href="/">Home</a>
+        <span>›</span>
+        <a href="#" id="patientLink">Patient</a>
+        <span>›</span>
+        <span id="docName">Document</span>
+    </div>
+    
+    <div class="main-container">
+        <!-- PDF Panel -->
+        <div class="pdf-panel">
+            <div class="pdf-header">
+                <span id="pdfTitle">📄 Loading...</span>
+                <a href="#" id="openPdfLink" target="_blank">Open in new tab ↗</a>
+            </div>
+            <div id="pdfContainer">
+                <div class="loading">Loading document...</div>
+            </div>
+        </div>
+        
+        <!-- Info Panel -->
+        <div class="info-panel">
+            <!-- Action Bar -->
+            <div class="action-bar">
+                <button class="btn btn-primary" onclick="reprocessExtraction()" id="reprocessBtn">🔄 Re-run Extraction</button>
+                <button class="btn btn-success" onclick="regenerateReports()" id="regenerateBtn">📊 Regenerate Reports</button>
+                <button class="btn btn-warning" onclick="markReviewed()" id="reviewBtn">✓ Mark Reviewed</button>
+            </div>
+            
+            <!-- Status Banner -->
+            <div class="status-banner" id="statusBanner">
+                <span class="status-icon">⏳</span>
+                <span id="statusText">Loading...</span>
+            </div>
+            
+            <!-- Conflict Banner (hidden by default) -->
+            <div class="conflict-banner" id="conflictBanner" style="display:none;">
+                <h3>⚠️ Conflicts Detected</h3>
+                <div id="conflictList"></div>
+            </div>
+            
+            <!-- Missing Fields Warning -->
+            <div class="missing-fields" id="missingFieldsPanel" style="display:none;">
+                <h4>⚠️ Missing/Unknown Fields</h4>
+                <div id="missingFieldsList"></div>
+            </div>
+            
+            <!-- Source Links Panel -->
+            <div class="source-panel">
+                <h4>📁 Source Documents (Audit Trail)</h4>
+                <div class="source-links" id="sourceLinks">
+                    <a class="source-link" id="srcPdf" href="#" target="_blank">📄 PDF</a>
+                    <a class="source-link" id="srcTxt" href="#" target="_blank">📝 Extracted Text</a>
+                    <a class="source-link" id="srcJson" href="#" onclick="downloadExtractionJson(); return false;">📋 Extraction JSON</a>
+                    <a class="source-link" id="srcValidation" href="#" onclick="downloadValidationJson(); return false;">✅ Validation JSON</a>
+                </div>
+            </div>
+            
+            <!-- Extraction Summary -->
+            <div class="section">
+                <div class="section-title">📋 Extraction Summary</div>
+                <div class="summary-grid" id="extractionSummary">
+                    <div class="loading">Loading extraction data...</div>
+                </div>
+            </div>
+            
+            <!-- Selective Merge Panel -->
+            <div class="merge-panel" id="mergePanel" style="display:none;">
+                <h4>🔀 Approve Merge (select sections)</h4>
+                <div class="merge-options" id="mergeOptions"></div>
+                <button class="btn btn-success" onclick="performSelectiveMerge()">✅ Merge Selected</button>
+                <button class="btn btn-secondary" onclick="hideMergePanel()">Cancel</button>
+            </div>
+            
+            <!-- Reports -->
+            <div class="section">
+                <div class="section-title">
+                    📑 Generated Reports
+                    <span class="confidence-badge" id="overallConfidence">--</span>
+                </div>
+                <div class="report-list" id="reportList">
+                    <div class="loading">Loading reports...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/api';
+        let documentId = null;
+        let documentData = null;
+        let extractionData = null;
+        let validationData = null;
+        let conflictData = null;
+        let reports = [];
+        
+        // Get documentId from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        documentId = urlParams.get('documentId');
+        
+        if (!documentId) {
+            showToast('No document ID provided', 'error');
+        } else {
+            loadDocument();
+        }
+        
+        async function loadDocument() {
+            try {
+                // Load document details with extraction
+                const res = await fetch(`${API_BASE}/documents/${documentId}`);
+                if (!res.ok) throw new Error('Document not found');
+                documentData = await res.json();
+                
+                // Parse extraction if available
+                if (documentData.extracted_json) {
+                    const raw = typeof documentData.extracted_json === 'string' 
+                        ? JSON.parse(documentData.extracted_json) 
+                        : documentData.extracted_json;
+                    extractionData = raw.pass2 || raw;
+                }
+                
+                // Parse validation for field confidence
+                if (documentData.validation_json) {
+                    validationData = typeof documentData.validation_json === 'string'
+                        ? JSON.parse(documentData.validation_json)
+                        : documentData.validation_json;
+                }
+                
+                renderDocument();
+                loadReports();
+                loadConflicts();
+            } catch (err) {
+                console.error('Error loading document:', err);
+                showToast('Error loading document: ' + err.message, 'error');
+            }
+        }
+        
+        function renderDocument() {
+            // Update breadcrumb
+            document.getElementById('docName').textContent = documentData.original_filename;
+            document.getElementById('patientLink').href = `/?patientId=${documentData.patient_id}`;
+            document.getElementById('patientLink').textContent = `Patient #${documentData.patient_id}`;
+            
+            // PDF Panel
+            const pdfContainer = document.getElementById('pdfContainer');
+            document.getElementById('pdfTitle').textContent = `📄 ${documentData.original_filename}`;
+            
+            if (documentData.stored_path) {
+                const pdfUrl = `/uploads/${documentData.stored_path.split('/').pop()}`;
+                document.getElementById('openPdfLink').href = pdfUrl;
+                document.getElementById('srcPdf').href = pdfUrl;
+                
+                if (documentData.stored_path.endsWith('.pdf')) {
+                    pdfContainer.innerHTML = `<iframe class="pdf-frame" src="${pdfUrl}"></iframe>`;
+                } else {
+                    pdfContainer.innerHTML = `<iframe class="pdf-frame" src="${pdfUrl}" style="background:white;padding:20px;"></iframe>`;
+                }
+            } else {
+                pdfContainer.innerHTML = '<div class="no-pdf">No document file available</div>';
+                document.getElementById('srcPdf').classList.add('disabled');
+            }
+            
+            // Text file link
+            if (documentData.text_path) {
+                document.getElementById('srcTxt').href = `/uploads/${documentData.text_path.split('/').pop()}`;
+            } else {
+                document.getElementById('srcTxt').classList.add('disabled');
+            }
+            
+            // Status Banner
+            const statusBanner = document.getElementById('statusBanner');
+            const statusText = document.getElementById('statusText');
+            statusBanner.className = `status-banner ${documentData.status}`;
+            
+            const statusMap = {
+                'uploaded': { icon: '📤', text: 'Document uploaded - Ready for extraction' },
+                'processing': { icon: '⏳', text: 'Processing extraction...' },
+                'extracted': { icon: '✅', text: 'Extraction complete - Ready for review' },
+                'needs_review': { icon: '⚠️', text: 'Needs manual review before merging' },
+                'merged': { icon: '🎉', text: 'Merged into patient chart' },
+                'error': { icon: '❌', text: 'Extraction failed - ' + (documentData.error_message || 'Unknown error') }
+            };
+            const status = statusMap[documentData.status] || { icon: '❓', text: documentData.status };
+            statusBanner.querySelector('.status-icon').textContent = status.icon;
+            statusText.textContent = status.text;
+            
+            // Update buttons
+            document.getElementById('reviewBtn').disabled = documentData.status === 'merged';
+            
+            // Show merge panel if extracted but not merged
+            if (documentData.status === 'extracted' || documentData.status === 'needs_review') {
+                buildMergePanel();
+            }
+            
+            // Render extraction summary with confidence badges
+            renderExtractionSummary();
+            
+            // Show missing fields warning
+            renderMissingFields();
+        }
+        
+        function getConfidenceBadge(score, label = '') {
+            if (score === undefined || score === null) return '';
+            const pct = Math.round(score * 100);
+            const cls = pct >= 80 ? 'high' : pct >= 60 ? 'medium' : 'low';
+            return `<span class="conf-badge ${cls}">${label}${pct}%</span>`;
+        }
+        
+        function renderExtractionSummary() {
+            const container = document.getElementById('extractionSummary');
+            const fieldConf = validationData?.field_confidence || {};
+            
+            if (!extractionData) {
+                container.innerHTML = '<div class="empty-state">No extraction data. Click "Re-run Extraction" to process.</div>';
+                return;
+            }
+            
+            const items = [];
+            
+            // Document metadata
+            if (extractionData.doc_type || extractionData.doc?.doc_type) {
+                items.push({ label: 'Document Type', value: extractionData.doc_type || extractionData.doc?.doc_type });
+            }
+            if (extractionData.date_of_surgery || extractionData.surgery?.date) {
+                const date = extractionData.date_of_surgery || extractionData.surgery?.date;
+                items.push({ label: 'Surgery Date', value: date, confidence: fieldConf.surgery_date });
+            }
+            if (extractionData.date_of_admission) {
+                items.push({ label: 'Admission', value: extractionData.date_of_admission, confidence: fieldConf.admission_date });
+            }
+            if (extractionData.date_of_discharge) {
+                items.push({ label: 'Discharge', value: extractionData.date_of_discharge, confidence: fieldConf.discharge_date });
+            }
+            
+            // Counts
+            const preopDx = extractionData.preop_diagnoses || extractionData.diagnoses?.preop || [];
+            const postopDx = extractionData.postop_diagnoses || extractionData.diagnoses?.postop || [];
+            const procedures = extractionData.procedures || extractionData.surgery?.procedures || [];
+            const meds = extractionData.medications || [];
+            const allergies = extractionData.allergies || [];
+            
+            if (preopDx.length) items.push({ label: 'Preop Diagnoses', value: preopDx.length, confidence: fieldConf.preop_dx });
+            if (postopDx.length) items.push({ label: 'Postop Diagnoses', value: postopDx.length, confidence: fieldConf.postop_dx });
+            if (procedures.length) items.push({ label: 'Procedures', value: procedures.length, confidence: fieldConf.procedures });
+            if (meds.length) items.push({ label: 'Medications', value: meds.length, confidence: fieldConf.medications });
+            if (allergies.length) items.push({ label: 'Allergies', value: allergies.join(', '), confidence: fieldConf.allergies });
+            
+            container.innerHTML = items.map(item => `
+                <div class="summary-item">
+                    <div class="summary-label">${item.label}</div>
+                    <div class="summary-value">${item.value}</div>
+                    ${item.confidence !== undefined ? `<div class="conf-badge">${getConfidenceBadge(item.confidence)}</div>` : ''}
+                </div>
+            `).join('');
+        }
+        
+        function renderMissingFields() {
+            const panel = document.getElementById('missingFieldsPanel');
+            const list = document.getElementById('missingFieldsList');
+            const missing = validationData?.missing_fields || [];
+            
+            if (missing.length === 0) {
+                panel.style.display = 'none';
+                return;
+            }
+            
+            panel.style.display = 'block';
+            list.innerHTML = missing.map(f => `<span class="missing-tag">${f.replace(/_/g, ' ')}</span>`).join('');
+        }
+        
+        async function loadConflicts() {
+            try {
+                const res = await fetch(`${API_BASE}/documents/${documentId}/conflicts`);
+                conflictData = await res.json();
+                
+                if (conflictData.hasConflicts) {
+                    renderConflicts();
+                }
+            } catch (err) {
+                console.log('No conflicts or error loading:', err);
+            }
+        }
+        
+        function renderConflicts() {
+            const banner = document.getElementById('conflictBanner');
+            const list = document.getElementById('conflictList');
+            
+            if (!conflictData?.conflicts?.length) {
+                banner.style.display = 'none';
+                return;
+            }
+            
+            banner.style.display = 'block';
+            list.innerHTML = conflictData.conflicts.map(c => `
+                <div class="conflict-item">
+                    <div class="field">⚠️ ${c.field.replace(/_/g, ' ').toUpperCase()}</div>
+                    <div class="existing">Chart: ${Array.isArray(c.existing) ? c.existing.join(', ') : c.existing}</div>
+                    <div class="incoming">Document: ${Array.isArray(c.incoming) ? c.incoming.join(', ') : c.incoming}</div>
+                    <div style="font-size:0.85rem;color:#718096;margin-top:4px;">${c.message}</div>
+                </div>
+            `).join('');
+            
+            // Update merge panel checkboxes
+            updateMergePanelWithConflicts();
+        }
+        
+        function buildMergePanel() {
+            const panel = document.getElementById('mergePanel');
+            const options = document.getElementById('mergeOptions');
+            
+            const procedures = extractionData?.procedures || extractionData?.surgery?.procedures || [];
+            const diagnoses = (extractionData?.preop_diagnoses || extractionData?.diagnoses?.preop || []).length +
+                            (extractionData?.postop_diagnoses || extractionData?.diagnoses?.postop || []).length;
+            const meds = extractionData?.medications || [];
+            const allergies = extractionData?.allergies || [];
+            
+            const sections = [
+                { id: 'procedures', label: 'Procedures', count: procedures.length },
+                { id: 'diagnoses', label: 'Diagnoses', count: diagnoses },
+                { id: 'medications', label: 'Medications', count: meds.length },
+                { id: 'allergies', label: 'Allergies', count: allergies.length }
+            ];
+            
+            options.innerHTML = sections.map(s => `
+                <div class="merge-option" id="merge-opt-${s.id}">
+                    <input type="checkbox" id="merge-${s.id}" checked ${s.count === 0 ? 'disabled' : ''}>
+                    <label for="merge-${s.id}">${s.label}</label>
+                    <span class="count">(${s.count})</span>
+                </div>
+            `).join('');
+            
+            panel.style.display = 'block';
+        }
+        
+        function updateMergePanelWithConflicts() {
+            if (!conflictData?.safeToMerge) return;
+            
+            Object.entries(conflictData.safeToMerge).forEach(([field, safe]) => {
+                if (!safe) {
+                    const opt = document.getElementById(`merge-opt-${field}`);
+                    const checkbox = document.getElementById(`merge-${field}`);
+                    if (opt) {
+                        opt.classList.add('conflict');
+                        if (checkbox) checkbox.checked = false;
+                    }
+                }
+            });
+        }
+        
+        function hideMergePanel() {
+            document.getElementById('mergePanel').style.display = 'none';
+        }
+        
+        async function performSelectiveMerge() {
+            const mergeConfig = {
+                procedures: document.getElementById('merge-procedures')?.checked ?? true,
+                diagnoses: document.getElementById('merge-diagnoses')?.checked ?? true,
+                medications: document.getElementById('merge-medications')?.checked ?? true,
+                allergies: document.getElementById('merge-allergies')?.checked ?? true
+            };
+            
+            try {
+                const res = await fetch(`${API_BASE}/documents/${documentId}/merge`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ merge: mergeConfig })
+                });
+                const result = await res.json();
+                
+                if (result.merged) {
+                    const applied = result.merge_summary?.sections_applied?.join(', ') || 'selected sections';
+                    showToast(`Merged: ${applied}`, 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showToast('Merge failed: ' + (result.message || 'Unknown error'), 'error');
+                }
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+            }
+        }
+        
+        async function loadReports() {
+            try {
+                const res = await fetch(`${API_BASE}/patients/${documentData.patient_id}/reports`);
+                const allReports = await res.json();
+                reports = allReports.filter(r => r.document_id === parseInt(documentId));
+                renderReports();
+            } catch (err) {
+                console.error('Error loading reports:', err);
+            }
+        }
+        
+        function renderReports() {
+            const container = document.getElementById('reportList');
+            
+            if (reports.length === 0) {
+                container.innerHTML = '<div class="empty-state">No reports generated yet. Click "Regenerate Reports".</div>';
+                return;
+            }
+            
+            // Sort: document_digest first, then document_render
+            const sorted = [...reports].sort((a, b) => {
+                if (a.report_type === 'document_digest') return -1;
+                if (b.report_type === 'document_digest') return 1;
+                if (a.report_type === 'document_render') return -1;
+                if (b.report_type === 'document_render') return 1;
+                return 0;
+            });
+            
+            // Overall confidence from first report
+            const primary = sorted.find(r => r.report_type === 'document_render' || r.report_type === 'document_digest');
+            if (primary) {
+                const conf = Math.round(primary.confidence * 100);
+                const badge = document.getElementById('overallConfidence');
+                badge.textContent = `${conf}%`;
+                badge.className = `confidence-badge ${conf >= 80 ? 'high' : conf >= 60 ? 'medium' : 'low'}`;
+            }
+            
+            container.innerHTML = sorted.map(report => `
+                <div class="report-item" onclick="viewReport(${report.id})">
+                    <div class="report-title">${report.title}</div>
+                    <div class="report-meta">${report.subtitle || ''}</div>
+                    <span class="report-type ${report.report_type}">${report.report_type.replace(/_/g, ' ')}</span>
+                </div>
+            `).join('');
+        }
+        
+        function viewReport(reportId) {
+            window.location.href = `/patient-reports.html?patientId=${documentData.patient_id}&reportId=${reportId}`;
+        }
+        
+        async function reprocessExtraction() {
+            const btn = document.getElementById('reprocessBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Processing...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/documents/${documentId}/process`, { method: 'POST' });
+                const result = await res.json();
+                
+                if (result.error) {
+                    showToast('Error: ' + result.error, 'error');
+                } else {
+                    showToast('Extraction complete!', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                }
+            } catch (err) {
+                showToast('Error processing: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '🔄 Re-run Extraction';
+            }
+        }
+        
+        async function regenerateReports() {
+            const btn = document.getElementById('regenerateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ Generating...';
+            
+            try {
+                const res = await fetch(`${API_BASE}/documents/${documentId}/generate-reports`, { method: 'POST' });
+                const result = await res.json();
+                showToast(`Created: ${result.created_count}, Updated: ${result.updated_count}`, 'success');
+                loadReports();
+            } catch (err) {
+                showToast('Error generating: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '📊 Regenerate Reports';
+            }
+        }
+        
+        async function markReviewed() {
+            try {
+                for (const report of reports) {
+                    await fetch(`${API_BASE}/patient-reports/${report.id}/mark-reviewed`, { method: 'POST' });
+                }
+                showToast('Marked as reviewed', 'success');
+                loadReports();
+            } catch (err) {
+                showToast('Error: ' + err.message, 'error');
+            }
+        }
+        
+        function downloadExtractionJson() {
+            if (!extractionData) {
+                showToast('No extraction data available', 'error');
+                return;
+            }
+            const blob = new Blob([JSON.stringify(extractionData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `extraction-doc${documentId}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function downloadValidationJson() {
+            if (!validationData) {
+                showToast('No validation data available', 'error');
+                return;
+            }
+            const blob = new Blob([JSON.stringify(validationData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `validation-doc${documentId}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+        
+        function goBack() {
+            if (documentData) {
+                window.location.href = `/?patientId=${documentData.patient_id}`;
+            } else {
+                window.history.back();
+            }
+        }
+        
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+    </script>
+</body>
+</html>

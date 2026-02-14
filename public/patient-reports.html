@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Patient Reports - H3Clinic</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f7fa; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        h1 { color: #1a202c; margin-bottom: 24px; display: flex; align-items: center; gap: 12px; }
+        .back-link { color: #4299e1; text-decoration: none; font-size: 0.9rem; }
+        .layout { display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
+        
+        /* Report List */
+        .report-list { background: white; border-radius: 8px; padding: 16px; height: fit-content; position: sticky; top: 20px; }
+        .report-list h2 { font-size: 1.1rem; margin-bottom: 12px; color: #2d3748; }
+        .report-item {
+            padding: 12px;
+            border-left: 3px solid #4299e1;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .report-item:hover { background: #f7fafc; }
+        .report-item.active { background: #ebf8ff; }
+        .report-item.needs_review { border-left-color: #f6ad55; }
+        .report-item.error { border-left-color: #fc8181; }
+        .report-item.reviewed { border-left-color: #48bb78; }
+        .report-item.document_render { border-left-color: #805ad5; }
+        .report-title { font-weight: 600; font-size: 0.9rem; color: #2d3748; }
+        .report-subtitle { font-size: 0.8rem; color: #718096; margin-top: 4px; }
+        .report-type { font-size: 0.75rem; color: #a0aec0; text-transform: uppercase; margin-top: 4px; }
+        
+        /* Report Viewer */
+        .report-viewer { background: white; border-radius: 8px; padding: 24px; min-height: 600px; }
+        .report-header { margin-bottom: 24px; border-bottom: 2px solid #e2e8f0; padding-bottom: 16px; }
+        .report-header h2 { color: #1a202c; font-size: 1.5rem; display: flex; align-items: center; gap: 12px; }
+        .report-header .meta { color: #718096; font-size: 0.9rem; margin-top: 8px; }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-badge.generated { background: #c6f6d5; color: #22543d; }
+        .status-badge.needs_review { background: #feebc8; color: #7c2d12; }
+        .status-badge.reviewed { background: #bee3f8; color: #2c5282; }
+        .status-badge.error { background: #fed7d7; color: #c53030; }
+        
+        /* Document View Layout */
+        .document-view { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .document-view.full-width { grid-template-columns: 1fr; }
+        
+        /* PDF Viewer */
+        .pdf-panel { background: #1a202c; border-radius: 8px; overflow: hidden; }
+        .pdf-header { 
+            background: #2d3748; 
+            padding: 12px 16px; 
+            color: white; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+        }
+        .pdf-header a { color: #63b3ed; text-decoration: none; font-size: 0.85rem; }
+        .pdf-frame { width: 100%; height: 500px; border: none; background: #4a5568; }
+        .no-pdf { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            height: 500px; 
+            color: #a0aec0; 
+            font-size: 0.9rem; 
+        }
+        
+        /* Cards Panel */
+        .cards-panel { display: flex; flex-direction: column; gap: 16px; }
+        
+        /* Report Cards */
+        .cards { display: grid; gap: 16px; }
+        .card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f7fafc;
+        }
+        .card-title { font-size: 1rem; font-weight: 600; color: #2d3748; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .card-icon { font-size: 1.2rem; }
+        
+        /* Metric Card */
+        .metric-value { font-size: 2.5rem; font-weight: 700; color: #4299e1; }
+        .metric-value.text { font-size: 1.1rem; color: #2d3748; }
+        .metric-unit { font-size: 1rem; color: #718096; margin-left: 8px; }
+        
+        /* Timeline Card */
+        .timeline { position: relative; padding-left: 32px; }
+        .timeline-event { position: relative; padding-bottom: 20px; }
+        .timeline-event:before {
+            content: '';
+            position: absolute;
+            left: -24px;
+            top: 8px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4299e1;
+            border: 3px solid white;
+            box-shadow: 0 0 0 2px #4299e1;
+        }
+        .timeline-event.admission:before { background: #48bb78; box-shadow: 0 0 0 2px #48bb78; }
+        .timeline-event.surgery:before { background: #ed8936; box-shadow: 0 0 0 2px #ed8936; }
+        .timeline-event.discharge:before { background: #4299e1; box-shadow: 0 0 0 2px #4299e1; }
+        .timeline-event.followup:before { background: #9f7aea; box-shadow: 0 0 0 2px #9f7aea; }
+        .timeline-event:after {
+            content: '';
+            position: absolute;
+            left: -19px;
+            top: 20px;
+            width: 2px;
+            height: calc(100% - 12px);
+            background: #cbd5e0;
+        }
+        .timeline-event:last-child:after { display: none; }
+        .timeline-date { font-weight: 600; color: #2d3748; font-size: 0.9rem; }
+        .timeline-label { color: #4a5568; margin-top: 4px; }
+        
+        /* List Card */
+        .list-item {
+            padding: 10px 12px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            border-left: 3px solid #4299e1;
+        }
+        .list-item.warning { border-left-color: #ed8936; background: #fffaf0; }
+        .list-item-label { font-weight: 600; color: #2d3748; font-size: 0.9rem; }
+        .list-item-detail { color: #718096; font-size: 0.8rem; margin-top: 2px; }
+        
+        /* Alert Card */
+        .alert {
+            padding: 16px;
+            border-radius: 6px;
+            background: #bee3f8;
+            border-left: 4px solid #3182ce;
+        }
+        .alert.success { background: #c6f6d5; border-left-color: #38a169; }
+        .alert.warning { background: #feebc8; border-left-color: #dd6b20; }
+        .alert-title { font-weight: 600; color: #2c5282; margin-bottom: 8px; }
+        .alert.success .alert-title { color: #276749; }
+        .alert.warning .alert-title { color: #744210; }
+        .alert-message { color: #2d3748; }
+        
+        /* Chart containers */
+        .chart-container { position: relative; height: 200px; margin-top: 12px; }
+        .chart-container.donut { height: 180px; width: 180px; margin: 0 auto; }
+        
+        /* Highlights Card */
+        .highlight-item { 
+            padding: 12px; 
+            background: linear-gradient(135deg, #f6f8fa 0%, #fff 100%);
+            border-radius: 6px; 
+            margin-bottom: 8px; 
+            border-left: 3px solid #9f7aea;
+        }
+        .highlight-text { color: #2d3748; font-size: 0.9rem; line-height: 1.4; }
+        .highlight-source { color: #a0aec0; font-size: 0.75rem; margin-top: 4px; }
+        
+        /* Evidence Toggle */
+        .evidence-toggle { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0; }
+        .evidence-btn {
+            background: none;
+            border: none;
+            color: #4299e1;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: underline;
+        }
+        .evidence-text {
+            margin-top: 8px;
+            padding: 12px;
+            background: #edf2f7;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            color: #4a5568;
+            white-space: pre-wrap;
+            display: none;
+        }
+        .evidence-text.show { display: block; }
+        
+        /* Action buttons */
+        .report-actions { display: flex; gap: 8px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+        .btn { 
+            padding: 8px 16px; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #4299e1; color: white; }
+        .btn-primary:hover { background: #3182ce; }
+        .btn-secondary { background: #e2e8f0; color: #4a5568; }
+        .btn-secondary:hover { background: #cbd5e0; }
+        .btn-success { background: #48bb78; color: white; }
+        .btn-success:hover { background: #38a169; }
+        
+        /* Needs review banner */
+        .review-banner {
+            background: #feebc8;
+            border: 1px solid #f6ad55;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .review-banner .icon { font-size: 1.5rem; }
+        .review-banner .text { flex: 1; }
+        .review-banner .title { font-weight: 600; color: #744210; }
+        .review-banner .desc { color: #975a16; font-size: 0.85rem; }
+        
+        /* Edit modal */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            inset: 0; 
+            background: rgba(0,0,0,0.5); 
+            align-items: center; 
+            justify-content: center;
+            z-index: 1000;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+        .modal-header h3 { font-size: 1.2rem; color: #2d3748; }
+        .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #a0aec0; }
+        .modal-body textarea {
+            width: 100%;
+            height: 400px;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            resize: vertical;
+        }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        
+        /* Completeness stats */
+        .completeness-stats { margin-top: 12px; }
+        .stat-row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .stat-tag { 
+            padding: 4px 8px; 
+            border-radius: 4px; 
+            font-size: 0.75rem; 
+            font-weight: 500; 
+        }
+        .stat-tag.detected { background: #c6f6d5; color: #22543d; }
+        .stat-tag.missing { background: #fed7d7; color: #c53030; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>
+            📊 Patient Reports
+            <a href="/" class="back-link">← Back to Dashboard</a>
+        </h1>
+        
+        <div class="layout">
+            <!-- Report List Sidebar -->
+            <div class="report-list">
+                <h2>Report Cards</h2>
+                <div id="reportList"></div>
+            </div>
+            
+            <!-- Report Viewer -->
+            <div class="report-viewer">
+                <div id="reportViewer">
+                    <div class="empty-state">
+                        <p>Select a report to view</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Report JSON</h3>
+                <button class="modal-close" onclick="closeEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="editJsonArea" placeholder="Report JSON..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveReportEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api';
+        let currentPatientId = null;
+        let reports = [];
+        let selectedReportId = null;
+        let currentReportData = null;
+        let charts = {}; // Store chart instances
+
+        // Get patient ID from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        currentPatientId = urlParams.get('patientId');
+
+        if (currentPatientId) {
+            loadPatientReports(currentPatientId);
+        } else {
+            document.getElementById('reportList').innerHTML = '<p style="color:#718096;font-size:0.9rem;">No patient selected. Add ?patientId=1 to URL.</p>';
+        }
+
+        async function loadPatientReports(patientId) {
+            try {
+                const res = await fetch(`${API_BASE}/patients/${patientId}/reports`);
+                reports = await res.json();
+                renderReportList();
+                
+                // Auto-select document_render report if exists
+                const docRender = reports.find(r => r.report_type === 'document_render');
+                if (docRender) {
+                    viewReport(docRender.id);
+                }
+            } catch (err) {
+                console.error('Error loading reports:', err);
+                document.getElementById('reportList').innerHTML = '<p style="color:#fc8181;">Error loading reports</p>';
+            }
+        }
+
+        function renderReportList() {
+            const container = document.getElementById('reportList');
+            
+            if (reports.length === 0) {
+                container.innerHTML = '<p style="color:#a0aec0;font-size:0.9rem;">No reports generated yet</p>';
+                return;
+            }
+
+            // Sort: document_render first, then by date
+            const sorted = [...reports].sort((a, b) => {
+                if (a.report_type === 'document_render') return -1;
+                if (b.report_type === 'document_render') return 1;
+                return new Date(b.created_at) - new Date(a.created_at);
+            });
+
+            container.innerHTML = sorted.map(report => `
+                <div class="report-item ${report.status} ${report.report_type} ${selectedReportId === report.id ? 'active' : ''}" 
+                     onclick="viewReport(${report.id})">
+                    <div class="report-title">${report.title}</div>
+                    ${report.subtitle ? `<div class="report-subtitle">${report.subtitle}</div>` : ''}
+                    <div class="report-type">${report.report_type.replace(/_/g, ' ')}</div>
+                </div>
+            `).join('');
+        }
+
+        async function viewReport(reportId) {
+            selectedReportId = reportId;
+            renderReportList();
+            
+            // Destroy existing charts
+            Object.values(charts).forEach(chart => chart.destroy());
+            charts = {};
+            
+            try {
+                const res = await fetch(`${API_BASE}/patient-reports/${reportId}`);
+                const report = await res.json();
+                currentReportData = report;
+                
+                const reportData = typeof report.report_json === 'string' 
+                    ? JSON.parse(report.report_json) 
+                    : report.report_json;
+                
+                // Check if this is a document_view layout
+                if (reportData.layout === 'document_view') {
+                    renderDocumentView(report, reportData);
+                } else {
+                    renderStandardReport(report, reportData);
+                }
+            } catch (err) {
+                console.error('Error loading report:', err);
+                document.getElementById('reportViewer').innerHTML = '<div class="empty-state"><p style="color:#fc8181;">Error loading report</p></div>';
+            }
+        }
+
+        function renderDocumentView(report, reportData) {
+            const viewer = document.getElementById('reportViewer');
+            const doc = reportData.document || {};
+            
+            let needsReviewBanner = '';
+            if (report.status === 'needs_review') {
+                needsReviewBanner = `
+                    <div class="review-banner">
+                        <div class="icon">⚠️</div>
+                        <div class="text">
+                            <div class="title">Review Required</div>
+                            <div class="desc">This report has low confidence and should be reviewed before use.</div>
+                        </div>
+                        <button class="btn btn-success" onclick="markReviewed(${report.id})">Mark Reviewed</button>
+                    </div>
+                `;
+            }
+            
+            const pdfPanel = doc.pdf_url ? `
+                <div class="pdf-panel">
+                    <div class="pdf-header">
+                        <span>📄 ${doc.original_filename || 'Document'}</span>
+                        <a href="${doc.pdf_url}" target="_blank">Open in new tab ↗</a>
+                    </div>
+                    <iframe class="pdf-frame" src="${doc.pdf_url}"></iframe>
+                </div>
+            ` : `
+                <div class="pdf-panel">
+                    <div class="pdf-header">
+                        <span>📄 ${doc.original_filename || 'Document'}</span>
+                        ${doc.text_url ? `<a href="${doc.text_url}" target="_blank">View text ↗</a>` : ''}
+                    </div>
+                    <div class="no-pdf">PDF not available. Text extraction only.</div>
+                </div>
+            `;
+            
+            const cardsHtml = renderCards(reportData.cards || []);
+            
+            viewer.innerHTML = `
+                <div class="report-header">
+                    <h2>
+                        ${report.title}
+                        <span class="status-badge ${report.status}">${report.status.replace(/_/g, ' ')}</span>
+                    </h2>
+                    <div class="meta">
+                        ${report.subtitle || ''} · Confidence: ${Math.round((reportData.confidence || 0) * 100)}%
+                        ${reportData.generated_at ? ` · Generated: ${new Date(reportData.generated_at).toLocaleString()}` : ''}
+                    </div>
+                </div>
+                ${needsReviewBanner}
+                <div class="document-view">
+                    ${pdfPanel}
+                    <div class="cards-panel">
+                        <div class="cards">${cardsHtml}</div>
+                    </div>
+                </div>
+                <div class="report-actions">
+                    <button class="btn btn-secondary" onclick="openEditModal()">Edit Report</button>
+                    ${report.status !== 'reviewed' ? `<button class="btn btn-success" onclick="markReviewed(${report.id})">Mark Reviewed</button>` : ''}
+                    <button class="btn btn-secondary" onclick="regenerateReport(${report.document_id})">Regenerate</button>
+                </div>
+            `;
+            
+            // Initialize charts after DOM is ready
+            setTimeout(() => initializeCharts(reportData.cards || []), 100);
+        }
+
+        function renderStandardReport(report, reportData) {
+            const viewer = document.getElementById('reportViewer');
+            const cardsHtml = renderCards(reportData.cards || []);
+            
+            let needsReviewBanner = '';
+            if (report.status === 'needs_review') {
+                needsReviewBanner = `
+                    <div class="review-banner">
+                        <div class="icon">⚠️</div>
+                        <div class="text">
+                            <div class="title">Review Required</div>
+                            <div class="desc">This report may need manual verification.</div>
+                        </div>
+                        <button class="btn btn-success" onclick="markReviewed(${report.id})">Mark Reviewed</button>
+                    </div>
+                `;
+            }
+            
+            viewer.innerHTML = `
+                <div class="report-header">
+                    <h2>
+                        ${report.title}
+                        <span class="status-badge ${report.status}">${report.status.replace(/_/g, ' ')}</span>
+                    </h2>
+                    <div class="meta">
+                        ${report.subtitle || ''}
+                        ${report.original_filename ? ` · From: ${report.original_filename}` : ''}
+                    </div>
+                </div>
+                ${needsReviewBanner}
+                <div class="cards">${cardsHtml}</div>
+                <div class="report-actions">
+                    <button class="btn btn-secondary" onclick="openEditModal()">Edit Report</button>
+                    ${report.status !== 'reviewed' ? `<button class="btn btn-success" onclick="markReviewed(${report.id})">Mark Reviewed</button>` : ''}
+                </div>
+            `;
+            
+            setTimeout(() => initializeCharts(reportData.cards || []), 100);
+        }
+
+        function renderCards(cards) {
+            return cards.map((card, idx) => {
+                switch (card.type) {
+                    case 'metric': return renderMetricCard(card, idx);
+                    case 'timeline': case 'timeline_chart': return renderTimelineCard(card, idx);
+                    case 'list': return renderListCard(card, idx);
+                    case 'alert': return renderAlertCard(card, idx);
+                    case 'bar_chart': return renderBarChartCard(card, idx);
+                    case 'donut_chart': return renderDonutChartCard(card, idx);
+                    case 'highlights': return renderHighlightsCard(card, idx);
+                    default: return '';
+                }
+            }).join('');
+        }
+
+        function renderMetricCard(card, idx) {
+            const isText = card.displayType === 'text' || (typeof card.value === 'string' && card.value.includes('→'));
+            return `
+                <div class="card">
+                    <div class="card-title"><span class="card-icon">📊</span> ${card.title}</div>
+                    <div>
+                        <span class="metric-value ${isText ? 'text' : ''}">${card.value}</span>
+                        ${card.unit && !isText ? `<span class="metric-unit">${card.unit}</span>` : ''}
+                    </div>
+                    ${renderEvidence(card.evidence, idx)}
+                </div>
+            `;
+        }
+
+        function renderTimelineCard(card, idx) {
+            const events = card.events || [];
+            const eventsHtml = events.map(event => `
+                <div class="timeline-event ${event.type || ''}">
+                    <div class="timeline-date">${event.date}</div>
+                    <div class="timeline-label">${event.label}</div>
+                </div>
+            `).join('');
+            
+            return `
+                <div class="card">
+                    <div class="card-title"><span class="card-icon">📅</span> ${card.title}</div>
+                    <div class="timeline">${eventsHtml}</div>
+                </div>
+            `;
+        }
+
+        function renderListCard(card, idx) {
+            const items = card.items || [];
+            const listStyle = card.listStyle || '';
+            const itemsHtml = items.map(item => `
+                <div class="list-item ${listStyle}">
+                    <div class="list-item-label">${item.label}</div>
+                    ${item.detail ? `<div class="list-item-detail">${item.detail}</div>` : ''}
+                </div>
+            `).join('');
+            
+            return `
+                <div class="card">
+                    <div class="card-title">
+                        <span class="card-icon">${card.title.includes('Allerg') ? '⚠️' : '📋'}</span> 
+                        ${card.title}
+                        ${card.count ? `<span style="color:#a0aec0;font-weight:normal;"> (${card.count})</span>` : ''}
+                    </div>
+                    ${itemsHtml}
+                </div>
+            `;
+        }
+
+        function renderAlertCard(card, idx) {
+            const severity = card.severity || 'info';
+            return `
+                <div class="card">
+                    <div class="alert ${severity}">
+                        <div class="alert-title">${card.title}</div>
+                        <div class="alert-message">${card.message}</div>
+                    </div>
+                    ${renderEvidence(card.evidence, idx)}
+                </div>
+            `;
+        }
+
+        function renderBarChartCard(card, idx) {
+            const items = card.items || [];
+            const itemsHtml = items.length > 0 ? items.map(item => `
+                <div class="list-item">
+                    <div class="list-item-label">${item.label}</div>
+                    ${item.detail ? `<div class="list-item-detail">${item.detail}</div>` : ''}
+                </div>
+            `).join('') : '';
+            
+            return `
+                <div class="card">
+                    <div class="card-title"><span class="card-icon">📊</span> ${card.title}</div>
+                    ${card.note ? `<div style="color:#718096;font-size:0.85rem;margin-bottom:12px;">${card.note}</div>` : ''}
+                    <div class="chart-container">
+                        <canvas id="barChart-${idx}"></canvas>
+                    </div>
+                    ${itemsHtml}
+                </div>
+            `;
+        }
+
+        function renderDonutChartCard(card, idx) {
+            const detected = card.detected || [];
+            const missing = card.missing || [];
+            
+            return `
+                <div class="card">
+                    <div class="card-title"><span class="card-icon">🎯</span> ${card.title}</div>
+                    <div style="display:flex;align-items:center;gap:20px;">
+                        <div class="chart-container donut">
+                            <canvas id="donutChart-${idx}"></canvas>
+                        </div>
+                        <div style="flex:1;">
+                            <div style="font-size:2rem;font-weight:700;color:#48bb78;">${card.value}%</div>
+                            <div style="color:#718096;font-size:0.85rem;">${card.note || 'Completeness'}</div>
+                        </div>
+                    </div>
+                    <div class="completeness-stats">
+                        ${detected.length > 0 ? `
+                            <div style="font-size:0.75rem;color:#718096;margin-bottom:4px;">Detected:</div>
+                            <div class="stat-row">
+                                ${detected.map(d => `<span class="stat-tag detected">✓ ${d}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                        ${missing.length > 0 ? `
+                            <div style="font-size:0.75rem;color:#718096;margin-bottom:4px;margin-top:8px;">Missing:</div>
+                            <div class="stat-row">
+                                ${missing.map(m => `<span class="stat-tag missing">✗ ${m}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderHighlightsCard(card, idx) {
+            const items = card.items || [];
+            const itemsHtml = items.map(item => `
+                <div class="highlight-item">
+                    <div class="highlight-text">${item.text}</div>
+                    <div class="highlight-source">${item.source}</div>
+                </div>
+            `).join('');
+            
+            return `
+                <div class="card">
+                    <div class="card-title"><span class="card-icon">💡</span> ${card.title}</div>
+                    ${itemsHtml}
+                </div>
+            `;
+        }
+
+        function renderEvidence(evidence, idx) {
+            if (!evidence) return '';
+            return `
+                <div class="evidence-toggle">
+                    <button class="evidence-btn" onclick="toggleEvidence(${idx})">View Source</button>
+                    <div class="evidence-text" id="evidence-${idx}">${evidence}</div>
+                </div>
+            `;
+        }
+
+        function toggleEvidence(idx) {
+            const el = document.getElementById(`evidence-${idx}`);
+            el.classList.toggle('show');
+        }
+
+        function initializeCharts(cards) {
+            cards.forEach((card, idx) => {
+                if (card.type === 'bar_chart') {
+                    const ctx = document.getElementById(`barChart-${idx}`);
+                    if (ctx) {
+                        charts[`bar-${idx}`] = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: card.labels || [],
+                                datasets: [{
+                                    label: card.title,
+                                    data: card.values || [],
+                                    backgroundColor: '#4299e1',
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                indexAxis: card.chartType === 'horizontal_bar' ? 'y' : 'x',
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { display: false } },
+                                    y: { beginAtZero: true }
+                                }
+                            }
+                        });
+                    }
+                }
+                
+                if (card.type === 'donut_chart') {
+                    const ctx = document.getElementById(`donutChart-${idx}`);
+                    if (ctx && card.segments) {
+                        charts[`donut-${idx}`] = new Chart(ctx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: card.segments.map(s => s.label),
+                                datasets: [{
+                                    data: card.segments.map(s => s.value),
+                                    backgroundColor: card.segments.map(s => s.color),
+                                    borderWidth: 0
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                cutout: '70%',
+                                plugins: { legend: { display: false } }
+                            }
+                        });
+                    }
+                }
+            });
+        }
+
+        // Action handlers
+        async function markReviewed(reportId) {
+            try {
+                await fetch(`${API_BASE}/patient-reports/${reportId}/mark-reviewed`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                await loadPatientReports(currentPatientId);
+                viewReport(reportId);
+            } catch (err) {
+                console.error('Error marking reviewed:', err);
+                alert('Failed to mark as reviewed');
+            }
+        }
+
+        async function regenerateReport(documentId) {
+            if (!documentId) {
+                alert('No document associated with this report');
+                return;
+            }
+            try {
+                const res = await fetch(`${API_BASE}/documents/${documentId}/generate-document-report`, {
+                    method: 'POST'
+                });
+                const result = await res.json();
+                if (result.id) {
+                    await loadPatientReports(currentPatientId);
+                    viewReport(result.id);
+                }
+            } catch (err) {
+                console.error('Error regenerating:', err);
+                alert('Failed to regenerate report');
+            }
+        }
+
+        function openEditModal() {
+            if (!currentReportData) return;
+            const reportJson = typeof currentReportData.report_json === 'string'
+                ? currentReportData.report_json
+                : JSON.stringify(currentReportData.report_json, null, 2);
+            document.getElementById('editJsonArea').value = reportJson;
+            document.getElementById('editModal').classList.add('show');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editModal').classList.remove('show');
+        }
+
+        async function saveReportEdit() {
+            if (!currentReportData) return;
+            const jsonText = document.getElementById('editJsonArea').value;
+            
+            try {
+                JSON.parse(jsonText); // Validate
+                
+                const res = await fetch(`${API_BASE}/patient-reports/${currentReportData.id}/edit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ report_json: jsonText })
+                });
+                
+                if (res.ok) {
+                    closeEditModal();
+                    await loadPatientReports(currentPatientId);
+                    viewReport(currentReportData.id);
+                } else {
+                    const err = await res.json();
+                    alert('Error: ' + (err.error || 'Failed to save'));
+                }
+            } catch (e) {
+                alert('Invalid JSON: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
