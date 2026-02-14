@@ -75,6 +75,40 @@ const db = new sqlite3.Database(dbPath, (err) => {
                 if (err) console.error('Error creating journal_entries table: ' + err.message);
                 else console.log('Journal entries table ready');
             });
+
+            // Patient documents table
+            db.run(`CREATE TABLE IF NOT EXISTS patient_documents (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                patient_id INTEGER NOT NULL,
+                original_filename TEXT NOT NULL,
+                stored_path TEXT NOT NULL,
+                file_hash TEXT,
+                text_path TEXT,
+                status TEXT DEFAULT 'uploaded',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (patient_id) REFERENCES patients(id)
+            )`, (err) => {
+                if (err) console.error('Error creating patient_documents table: ' + err.message);
+                else console.log('Patient documents table ready');
+            });
+
+            // Document extractions table (AI extracted data)
+            db.run(`CREATE TABLE IF NOT EXISTS document_extractions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                document_id INTEGER NOT NULL,
+                extracted_json TEXT,
+                summary TEXT,
+                confidence REAL,
+                model TEXT,
+                needs_review INTEGER DEFAULT 0,
+                reviewed_at TEXT,
+                merged_at TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (document_id) REFERENCES patient_documents(id)
+            )`, (err) => {
+                if (err) console.error('Error creating document_extractions table: ' + err.message);
+                else console.log('Document extractions table ready');
+            });
         });
     }
 });
