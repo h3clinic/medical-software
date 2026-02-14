@@ -159,22 +159,47 @@ const mergeExtractionIntoChart = (patientId, extractionData) => {
             try { allergies = JSON.parse(patient.allergies_json) || []; } catch(e) {}
 
             // Merge new data (avoid duplicates)
-            if (extractionData.surgery?.procedures) {
+            // Handle surgeries - supports both formats:
+            // 1. chartFormat: { surgeries: [{ date, procedures: [...], surgeon }] }
+            // 2. legacyFormat: { surgery: { procedures: [{ procedure, date }] } }
+            if (extractionData.surgeries) {
+                extractionData.surgeries.forEach(surgery => {
+                    const surgeryKey = `${surgery.date || 'unknown'}-${(surgery.procedures || []).join(',')}`;
+                    if (!surgeries.some(s => `${s.date || 'unknown'}-${(s.procedures || []).join(',')}` === surgeryKey)) {
+                        surgeries.push(surgery);
+                    }
+                });
+            } else if (extractionData.surgery?.procedures) {
                 extractionData.surgery.procedures.forEach(proc => {
-                    if (!surgeries.some(s => s.procedure === proc.procedure && s.date === proc.date)) {
-                        surgeries.push(proc);
+                    const procName = typeof proc === 'string' ? proc : proc.procedure;
+                    if (!surgeries.some(s => (s.procedures || []).includes(procName))) {
+                        surgeries.push({
+                            procedure: procName,
+                            date: extractionData.surgery.date || null,
+                            surgeon: extractionData.surgery.surgeon || null,
+                            source_document_id: extractionData.source_document_id
+                        });
                     }
                 });
             }
             
+            // Handle diagnoses - supports both formats:
+            // 1. chartFormat: { diagnoses: ['dx1', 'dx2'] }
+            // 2. legacyFormat: { diagnoses: { preop: [...], postop: [...] } }
             if (extractionData.diagnoses) {
-                const allDiagnoses = [
-                    ...(extractionData.diagnoses.preop || []),
-                    ...(extractionData.diagnoses.postop || [])
-                ];
+                let allDiagnoses = [];
+                if (Array.isArray(extractionData.diagnoses)) {
+                    allDiagnoses = extractionData.diagnoses;
+                } else {
+                    allDiagnoses = [
+                        ...(extractionData.diagnoses.preop || []),
+                        ...(extractionData.diagnoses.postop || [])
+                    ];
+                }
                 allDiagnoses.forEach(dx => {
-                    if (!problems.includes(dx)) {
-                        problems.push(dx);
+                    const dxName = typeof dx === 'string' ? dx : dx.name || JSON.stringify(dx);
+                    if (!problems.some(p => (typeof p === 'string' ? p : p.name) === dxName)) {
+                        problems.push(dxName);
                     }
                 });
             }
